@@ -1,0 +1,12 @@
+version: "3.1"
+services:
+  externalissuesource:
+    working_dir: /gocode/src/github.com/aimeelaplant/externalissuesource
+    container_name: externalissuesource
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/gocode/src/github.com/aimeelaplant/externalissuesource
+    environment:
+      - "APPS_ENVIRONMENT=${APPS_ENVIRONMENT:-development}"
