@@ -71,15 +71,9 @@
   ]
   revision = "d0887baf81f4598189d4e12a37c6da86f0bba4d0"
 
-[[projects]]
-  name = "gopkg.in/h2non/gock.v1"
-  packages = ["."]
-  revision = "4692cba4394f79372bfe85996501ad43db9d82e0"
-  version = "v1.0.9"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ead02a96f19bca1d0751c19736de7e4134880d4bc5f8ad539d03e696300f5b2b"
+  inputs-digest = "7f957688aa18d0defcdbdb7075b24b5ff155c1f4295606e6f3fdcc1571e54355"
   solver-name = "gps-cdcl"
   solver-version = 1
