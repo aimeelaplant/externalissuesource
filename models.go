@@ -2,7 +2,7 @@ package externalissuesource
 
 import "time"
 
-// Represents a character from a remote source with all the issues attached.
+// A transformed object from a remote source with all the issues attached.
 type Character struct {
 	Publisher string
 	Name      string
@@ -35,12 +35,7 @@ type issueDates struct {
 	KeyDate         string // empty string or 2015-10-00 or 2000-00-00 or
 }
 
-// A link to a character with its URL and name.
-type CharacterLink struct {
-	Url  string
-	Name string
-}
-
+// Represents a character's detailed paged.
 type CharacterPage struct {
 	Publisher  string   // The name of the publisher.
 	Title      string   // The title of the page
@@ -48,6 +43,14 @@ type CharacterPage struct {
 	IssueLinks []string // Links to a character's issues.
 }
 
+
+// A link to a character with its URL and name from the search results.
+type CharacterLink struct {
+	Url  string
+	Name string
+}
+
+// Represents the search results returned for querying a character's name.
 type CharacterSearchResult struct {
 	Results []CharacterLink
 }
