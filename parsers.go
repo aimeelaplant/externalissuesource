@@ -45,14 +45,14 @@ type ExternalSourceParser interface {
 	BaseUrl() string
 }
 
-// This struct implements parsing entities from the cbdb.
-type CbdbParser struct {
+// This struct implements parsing entities from the cb source.
+type CbParser struct {
 	baseUrl string // The base URL for constructing links. Default is http://comicbookdb.com if not provided.
 }
 
 // Parses a character's page and returns the corresponding struct.
 // The caller is responsible for closing the body after it's done.
-func (p *CbdbParser) Character(body io.ReadCloser) (*CharacterPage, error) {
+func (p *CbParser) Character(body io.ReadCloser) (*CharacterPage, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, ErrParse
@@ -88,16 +88,16 @@ func (p *CbdbParser) Character(body io.ReadCloser) (*CharacterPage, error) {
 }
 
 // Gets the base URL for constructing links for the parser.
-func (p *CbdbParser) BaseUrl() string {
+func (p *CbParser) BaseUrl() string {
 	if p.baseUrl == "" {
-		p.baseUrl = cbdbUrl
+		p.baseUrl = cbUrl
 	}
 	return p.baseUrl
 }
 
 // Parses the links to character profiles and their names from the search page.
 // The caller is responsible for closing the body after it's done.
-func (p *CbdbParser) CharacterSearch(body io.ReadCloser) (*CharacterSearchResult, error) {
+func (p *CbParser) CharacterSearch(body io.ReadCloser) (*CharacterSearchResult, error) {
 	characterSearchResult := new(CharacterSearchResult)
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
@@ -126,7 +126,7 @@ func (p *CbdbParser) CharacterSearch(body io.ReadCloser) (*CharacterSearchResult
 
 // Parses an issue page and returns the corresponding struct.
 // The caller is responsible for closing the body after it's done.
-func (p *CbdbParser) Issue(body io.ReadCloser) (*Issue, error) {
+func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, ErrParse
@@ -220,7 +220,7 @@ func (p *CbdbParser) Issue(body io.ReadCloser) (*Issue, error) {
 	return issue, nil
 }
 
-func (p *CbdbParser) IssueLinks(body io.ReadCloser) ([]string, error) {
+func (p *CbParser) IssueLinks(body io.ReadCloser) ([]string, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, ErrParse
@@ -243,17 +243,17 @@ func (p *CbdbParser) IssueLinks(body io.ReadCloser) ([]string, error) {
 	return issueLinks, nil
 }
 
-type ComicsOrgParser struct {
+type CoParser struct {
 }
 
-const cbdbUrl = "http://comicbookdb.com"
+const cbUrl = "http://comicbookdb.com"
 
 type IssueResult struct {
 	Issue *Issue
 	Error error
 }
 
-func (p *ComicsOrgParser) Parse(body io.ReadCloser) ([]Issue, error) {
+func (p *CoParser) Parse(body io.ReadCloser) ([]Issue, error) {
 	issues, err := p.parseSlow(body)
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func (p *ComicsOrgParser) Parse(body io.ReadCloser) ([]Issue, error) {
 	return issues, nil
 }
 
-func (p *ComicsOrgParser) parseSlow(body io.ReadCloser) ([]Issue, error) {
+func (p *CoParser) parseSlow(body io.ReadCloser) ([]Issue, error) {
 	r := csv.NewReader(bufio.NewReader(body))
 	var issues []Issue
 	var lineCount = 0
@@ -289,7 +289,7 @@ func (p *ComicsOrgParser) parseSlow(body io.ReadCloser) ([]Issue, error) {
 	return issues, nil
 }
 
-func (p *ComicsOrgParser) parseLine(line []string) (*Issue, error) {
+func (p *CoParser) parseLine(line []string) (*Issue, error) {
 	id, err := strconv.ParseInt(strings.TrimSpace(line[0]), 10, 64)
 	if err != nil {
 		return nil, err
@@ -323,7 +323,7 @@ func (p *ComicsOrgParser) parseLine(line []string) (*Issue, error) {
 	return &searchResultRow, nil
 }
 
-func (p *ComicsOrgParser) determineSaleDate(dateObj issueDates) (time.Time, error) {
+func (p *CoParser) determineSaleDate(dateObj issueDates) (time.Time, error) {
 	publicationDate, err := p.getBestDate(dateObj.PublicationDate, dateObj.KeyDate)
 	if err != nil {
 		return publicationDate, err
@@ -340,13 +340,13 @@ func (p *ComicsOrgParser) determineSaleDate(dateObj issueDates) (time.Time, erro
 	return publicationDate.AddDate(0, -2, 0), nil
 }
 
-func (p *ComicsOrgParser) cleanDateStrings(date string) string {
+func (p *CoParser) cleanDateStrings(date string) string {
 	var trim []string
 	trim = append(trim, "[", "]", "Early", "Late")
 	return stringutil.TrimStrings(date, trim)
 }
 
-func (p *ComicsOrgParser) getBestDate(dates ...string) (time.Time, error) {
+func (p *CoParser) getBestDate(dates ...string) (time.Time, error) {
 	for _, dateString := range dates {
 		dateString := p.cleanDateStrings(dateString)
 		if dateString == "" || len(dateString) < 7 {
@@ -378,12 +378,12 @@ func (p *ComicsOrgParser) getBestDate(dates ...string) (time.Time, error) {
 	return time.Now(), errors.New("cannot parse the date strings")
 }
 
-func NewComicsOrgParser() IssueParser {
-	comicsOrgParser := ComicsOrgParser{}
-	return &comicsOrgParser
+func NewCoParser() IssueParser {
+	CoParser := CoParser{}
+	return &CoParser
 }
 
-func NewCbdbParser(baseUrl string) ExternalSourceParser {
-	cbdbParser := CbdbParser{baseUrl: baseUrl}
-	return &cbdbParser
+func NewCbParser(baseUrl string) ExternalSourceParser {
+	cbParser := CbParser{baseUrl: baseUrl}
+	return &cbParser
 }

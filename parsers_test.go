@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func TestComicsOrgParser_cleanDateStrings(t *testing.T) {
-	parser := ComicsOrgParser{}
+func TestCoParser_cleanDateStrings(t *testing.T) {
+	parser := CoParser{}
 	expected := "December 1998"
 	var s = parser.cleanDateStrings("[December] 1998")
 	assert.Equal(t, expected, s)
@@ -16,11 +16,11 @@ func TestComicsOrgParser_cleanDateStrings(t *testing.T) {
 	assert.Equal(t, expected, s)
 }
 
-func TestComicsOrgParser_getBestDate(t *testing.T) {
+func TestCoParser_getBestDate(t *testing.T) {
 	var date1 = "2017-05-17"
 	var date2 = "2017-07-00"
 	var date3 = "7/1/2017"
-	parser := ComicsOrgParser{}
+	parser := CoParser{}
 	date, err := parser.getBestDate(date1, date2, date3)
 	if date.Year() != 2017 || date.Month().String() != "May" {
 		t.Errorf("Got wrong date %s for %s", date, date1)
@@ -30,11 +30,11 @@ func TestComicsOrgParser_getBestDate(t *testing.T) {
 	}
 }
 
-func TestTestComicsOrgParser_getBestDateForIncompleteDay(t *testing.T) {
+func TestTestCoParser_getBestDateForIncompleteDay(t *testing.T) {
 	var date1 = ""
 	var date2 = "2000-12-00"
 	var date3 = "December 2000"
-	parser := ComicsOrgParser{}
+	parser := CoParser{}
 	date, err := parser.getBestDate(date1, date2, date3)
 	if date.Year() != 2000 || date.Month().String() != "December" {
 		t.Errorf("Got wrong date %s for %s", date, date1)
@@ -44,11 +44,11 @@ func TestTestComicsOrgParser_getBestDateForIncompleteDay(t *testing.T) {
 	}
 }
 
-func TestComicsOrgParser_getBestDateForIncompleteMonth(t *testing.T) {
+func TestCoParser_getBestDateForIncompleteMonth(t *testing.T) {
 	var date1 = ""
 	var date2 = "2009-00-00"
 	var date3 = "2009"
-	parser := ComicsOrgParser{}
+	parser := CoParser{}
 	date, err := parser.getBestDate(date1, date2, date3)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -58,13 +58,13 @@ func TestComicsOrgParser_getBestDateForIncompleteMonth(t *testing.T) {
 	}
 }
 
-func TestComicsOrgParser_determineSaleDate(t *testing.T) {
+func TestCoParser_determineSaleDate(t *testing.T) {
 	issueDatesObj := issueDates{
 		OnSaleDate:      "",
 		PublicationDate: "May 2000",
 		KeyDate:         "May 2000",
 	}
-	parser := ComicsOrgParser{}
+	parser := CoParser{}
 	saleDate, err := parser.determineSaleDate(issueDatesObj)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -88,12 +88,12 @@ func TestComicsOrgParser_determineSaleDate(t *testing.T) {
 	}
 }
 
-func TestCbdbParser_parse(t *testing.T) {
-	file, err := os.Open("./testdata/cbdb_character.html")
+func TestCbParser_parse(t *testing.T) {
+	file, err := os.Open("./testdata/cb_character.html")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	parser := CbdbParser{}
+	parser := CbParser{}
 	character, err := parser.Character(file)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -101,12 +101,12 @@ func TestCbdbParser_parse(t *testing.T) {
 	assert.Len(t, character.IssueLinks, 10)
 }
 
-func TestCbdbParser_Issue_TheEnd(t *testing.T) {
-	file, err := os.Open("./testdata/cbdb_issue_end.html")
+func TestCbParser_Issue_TheEnd(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_end.html")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	parser := CbdbParser{}
+	parser := CbParser{}
 	issue, err := parser.Issue(file)
 	assert.Nil(t, err)
 	assert.Equal(t, "1", issue.Number)
@@ -121,12 +121,12 @@ func TestCbdbParser_Issue_TheEnd(t *testing.T) {
 	assert.Equal(t, 10, int(issue.PublicationDate.Month()))
 }
 
-func TestCbdbParser_parseIssueLinks(t *testing.T) {
-	file, err := os.Open("./testdata/cbdb_character.html")
+func TestCbParser_parseIssueLinks(t *testing.T) {
+	file, err := os.Open("./testdata/cb_character.html")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	parser := CbdbParser{}
+	parser := CbParser{}
 	links, err := parser.IssueLinks(file)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -136,13 +136,13 @@ func TestCbdbParser_parseIssueLinks(t *testing.T) {
 	}
 }
 
-func TestCbdbParser_parseIssuePages(t *testing.T) {
-	file, err := os.Open("./testdata/cbdb_issue.html")
+func TestCbParser_parseIssuePages(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue.html")
 	defer file.Close()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	parser := CbdbParser{}
+	parser := CbParser{}
 	issue, err := parser.Issue(file)
 	assert.False(t, issue.IsVariant)
 	assert.True(t, issue.IsIssue)
@@ -154,7 +154,7 @@ func TestCbdbParser_parseIssuePages(t *testing.T) {
 	assert.Equal(t, "22", issue.Number)
 	assert.Equal(t, "Marvel", issue.Vendor)
 
-	file2, err2 := os.Open("./testdata/cbdb_issue_tpb.html")
+	file2, err2 := os.Open("./testdata/cb_issue_tpb.html")
 	defer file2.Close()
 	assert.Nil(t, err2)
 	issue2, err3 := parser.Issue(file2)
@@ -165,7 +165,7 @@ func TestCbdbParser_parseIssuePages(t *testing.T) {
 	assert.False(t, issue2.IsVariant)
 	assert.False(t, issue2.IsIssue)
 
-	file3, err3 := os.Open("./testdata/cbdb_issue_nn.html")
+	file3, err3 := os.Open("./testdata/cb_issue_nn.html")
 	defer file3.Close()
 	assert.Nil(t, err3)
 	issue3, err4 := parser.Issue(file3)
@@ -174,7 +174,7 @@ func TestCbdbParser_parseIssuePages(t *testing.T) {
 	assert.Equal(t, "", issue3.Number)
 	assert.False(t, issue3.IsIssue)
 
-	file4, err4 := os.Open("./testdata/cbdb_issue_digital.html")
+	file4, err4 := os.Open("./testdata/cb_issue_digital.html")
 	defer file4.Close()
 	assert.Nil(t, err4)
 	issue4, err4 := parser.Issue(file4)
@@ -184,12 +184,12 @@ func TestCbdbParser_parseIssuePages(t *testing.T) {
 	assert.False(t, issue4.IsIssue)
 }
 
-func TestCbdbParser_Error(t *testing.T) {
-	file, err := os.Open("./testdata/cbdb_error.html")
+func TestCbParser_Error(t *testing.T) {
+	file, err := os.Open("./testdata/cb_error.html")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	parser := CbdbParser{}
+	parser := CbParser{}
 	issue, err := parser.Issue(file)
 	assert.Nil(t, issue)
 	assert.Error(t, err)

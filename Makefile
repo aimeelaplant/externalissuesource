@@ -1,5 +1,5 @@
 DOCKER_APP_CONTAINER_NAME = externalissuesource
-DOCKER_RUN = docker-compose run --service-ports ${DOCKER_APP_CONTAINER_NAME}
+DOCKER_RUN = docker-compose run ${DOCKER_APP_CONTAINER_NAME}
 GOFILES_EXCLUDING_VENDOR = $(shell find . -type f -name '*.go' -not -path './vendor/*')
 
 .PHONY: up

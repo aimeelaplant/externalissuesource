@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const cbdbSearchPath = "/search.php"
+const cbSearchPath = "/search.php"
 
 var (
 	ErrIssueNotFound = errors.New("issue URL not found")
@@ -23,16 +23,16 @@ type ExternalSource interface {
 }
 
 // Configuration options
-type CbdbExternalSourceConfig struct {
+type CbExternalSourceConfig struct {
 	WorkerPoolLimit int            // Default is 20. Limit the amount of goroutines to parse issues for a character.
 	RetryOpts       []retry.Option // A slice of options for retrying when getting an issue fails.
 }
 
-type CbdbExternalSource struct {
+type CbExternalSource struct {
 	httpClient *http.Client
 	parser     ExternalSourceParser
 	logger     *zap.Logger
-	config     *CbdbExternalSourceConfig
+	config     *CbExternalSourceConfig
 }
 
 type issueResult struct {
@@ -41,7 +41,7 @@ type issueResult struct {
 }
 
 // Fetches the character from the URL and concurrently gets all the issues for the character.
-func (s *CbdbExternalSource) Character(url string) (*Character, error) {
+func (s *CbExternalSource) Character(url string) (*Character, error) {
 	character := new(Character)
 	resp, err := s.httpClient.Get(url)
 	if err != nil {
@@ -145,8 +145,8 @@ func (s *CbdbExternalSource) Character(url string) (*Character, error) {
 }
 
 // Performs a search on the provided query and returns the search result for found characters.
-func (s *CbdbExternalSource) SearchCharacter(query string) (CharacterSearchResult, error) {
-	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", s.parser.BaseUrl(), cbdbSearchPath), nil)
+func (s *CbExternalSource) SearchCharacter(query string) (CharacterSearchResult, error) {
+	request, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", s.parser.BaseUrl(), cbSearchPath), nil)
 	if err != nil {
 		return CharacterSearchResult{}, err
 	}
@@ -169,10 +169,10 @@ func (s *CbdbExternalSource) SearchCharacter(query string) (CharacterSearchResul
 	return *characterSearchResult, nil
 }
 
-func NewCbdbExternalSource(httpClient *http.Client, parser ExternalSourceParser, logger *zap.Logger, config *CbdbExternalSourceConfig) ExternalSource {
-	return &CbdbExternalSource{
+func NewCbExternalSource(httpClient *http.Client, logger *zap.Logger, config *CbExternalSourceConfig) ExternalSource {
+	return &CbExternalSource{
 		httpClient: httpClient,
-		parser:     parser,
+		parser:     &CbParser{},
 		logger:     logger,
 		config:     config,
 	}

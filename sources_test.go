@@ -70,7 +70,7 @@ func HandleCyclopsHttpCalls(w http.ResponseWriter, r *http.Request) {
 		}
 		if id == "344932" {
 			if retryCallCount == 0 {
-				file, err := os.Open("./testdata/cbdb_error.html")
+				file, err := os.Open("./testdata/cb_error.html")
 				if err != nil {
 					panic(err)
 				}
@@ -97,7 +97,7 @@ func HandleCyclopsHttpCalls(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func TestCbdbExternalSource_CharacterFails(t *testing.T) {
+func TestCbExternalSource_CharacterFails(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -107,23 +107,28 @@ func TestCbdbExternalSource_CharacterFails(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	config := &CbdbExternalSourceConfig{}
-	externalSource := NewCbdbExternalSource(ts.Client(), &CbdbParser{}, logger, config)
+	config := &CbExternalSourceConfig{}
+	externalSource := NewCbExternalSource(ts.Client(), logger, config)
 	character, err := externalSource.Character(url)
 	assert.Nil(t, character)
 	assert.Error(t, err)
 }
 
-func TestCbdbExternalSource_CharacterCyclops(t *testing.T) {
+func TestCbExternalSource_CharacterCyclops(t *testing.T) {
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		t.Error(err)
 	}
 	ts := httptest.NewServer(http.HandlerFunc(HandleCyclopsHttpCalls))
 	defer ts.Close()
-	config := &CbdbExternalSourceConfig{}
-	parser := NewCbdbParser(ts.URL)
-	externalSource := NewCbdbExternalSource(ts.Client(), parser, logger, config)
+	config := &CbExternalSourceConfig{}
+	parser := NewCbParser(ts.URL)
+	externalSource := CbExternalSource{
+		httpClient: ts.Client(),
+		parser: parser,
+		config: config,
+		logger: logger,
+	}
 	character, err := externalSource.Character(fmt.Sprintf("%s/character.php?ID=82321", ts.URL))
 	if err != nil {
 		t.Error(err)
@@ -143,7 +148,7 @@ func TestCbdbExternalSource_CharacterCyclops(t *testing.T) {
 	retryCallCount = 0
 }
 
-func TestNewCbdbExternalSource_SearchCyclops(t *testing.T) {
+func TestNewCbExternalSource_SearchCyclops(t *testing.T) {
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		t.Error(err)
@@ -171,9 +176,14 @@ func TestNewCbdbExternalSource_SearchCyclops(t *testing.T) {
 
 	}))
 	defer ts.Close()
-	config := &CbdbExternalSourceConfig{}
-	parser := NewCbdbParser(ts.URL)
-	externalSource := NewCbdbExternalSource(ts.Client(), parser, logger, config)
+	config := &CbExternalSourceConfig{}
+	parser := NewCbParser(ts.URL)
+	externalSource := CbExternalSource{
+		httpClient: ts.Client(),
+		parser: parser,
+		config: config,
+		logger: logger,
+	}
 	searchResult, err := externalSource.SearchCharacter("cyclops")
 	if err != nil {
 		t.Error(err)
@@ -185,7 +195,7 @@ func TestNewCbdbExternalSource_SearchCyclops(t *testing.T) {
 	}
 }
 
-func TestNewCbdbExternalSource_SearchCyclopsFails(t *testing.T) {
+func TestNewCbExternalSource_SearchCyclopsFails(t *testing.T) {
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		t.Error(err)
@@ -204,9 +214,14 @@ func TestNewCbdbExternalSource_SearchCyclopsFails(t *testing.T) {
 
 	}))
 	defer ts.Close()
-	config := &CbdbExternalSourceConfig{}
-	parser := NewCbdbParser(ts.URL)
-	externalSource := NewCbdbExternalSource(ts.Client(), parser, logger, config)
+	config := &CbExternalSourceConfig{}
+	parser := NewCbParser(ts.URL)
+	externalSource := CbExternalSource{
+		httpClient: ts.Client(),
+		parser: parser,
+		config: config,
+		logger: logger,
+	}
 	_, err = externalSource.SearchCharacter("cyclops")
 	assert.Error(t, err)
 }
