@@ -66,8 +66,14 @@ func (p *CbParser) Character(body io.ReadCloser) (*CharacterPage, error) {
 	characterPage := new(CharacterPage)
 	firstParen := strings.Index(titleText, " (")
 	secondParen := strings.Index(titleText, ")")
-	characterPage.Name = titleText[:firstParen]
-	characterPage.Publisher = titleText[firstParen+2 : secondParen]
+	if firstParen != -1 {
+		characterPage.Name = titleText[:firstParen]
+		if secondParen != -1 {
+			characterPage.Publisher = titleText[firstParen+2 : secondParen]
+		}
+	} else {
+		characterPage.Name = titleText
+	}
 	characterPage.Title = titleText
 
 	// Get the issue links

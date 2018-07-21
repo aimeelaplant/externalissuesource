@@ -209,3 +209,16 @@ func TestCbParser_Error(t *testing.T) {
 	assert.Nil(t, search)
 	assert.Error(t, err)
 }
+
+func TestCbParser_Issue(t *testing.T) {
+	file, err := os.Open("./testdata/1.html")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	i, err := parser.Character(file)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	assert.Equal(t, "Emmaline Frost", i.Name)
+}
