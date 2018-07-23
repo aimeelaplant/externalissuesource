@@ -18,7 +18,7 @@ var (
 )
 
 type ExternalSource interface {
-	Character(url string) (*Character, error)
+	Character(url string, doFetchIssue func(issueId string) bool) (*Character, error)
 	SearchCharacter(query string) (CharacterSearchResult, error)
 }
 
@@ -40,10 +40,11 @@ type issueResult struct {
 	Error error
 }
 
-// Fetches the character from the URL and concurrently gets all the issues for the character.
-func (s *CbExternalSource) Character(url string) (*Character, error) {
+// Fetches the character from the URL and concurrently gets the issues that match true for the `doFetchIssue` callback.
+func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bool) (*Character, error) {
 	character := new(Character)
 	resp, err := s.httpClient.Get(url)
+	defer resp.Body.Close()
 	if err != nil {
 		return character, err
 	}
@@ -57,8 +58,21 @@ func (s *CbExternalSource) Character(url string) (*Character, error) {
 	character.Name = characterPage.Name
 	character.Publisher = characterPage.Publisher
 
+	issuesToFetch := make([]string, 0)
+	for _, issueLink := range characterPage.IssueLinks {
+		issueIdIndex := strings.LastIndex(issueLink, "=")
+		if issueIdIndex != -1 {
+			id := issueLink[issueIdIndex + 1:]
+			if doFetchIssue(id) {
+				issuesToFetch = append(issuesToFetch, issueLink)
+			}
+		} else {
+			return nil, errors.New(fmt.Sprintf("can't get issue ID from %s", issueLink))
+		}
+	}
+
 	// setup a worker pool of about 20 links per pool
-	poolLength := len(characterPage.IssueLinks)
+	poolLength := len(issuesToFetch)
 	left := 0
 	right := 0
 	var concurrencyLimit int
@@ -68,7 +82,7 @@ func (s *CbExternalSource) Character(url string) (*Character, error) {
 		concurrencyLimit = s.config.WorkerPoolLimit
 	}
 	s.logger.Info(fmt.Sprintf("%d character links to parse for %s", poolLength, character.Name))
-	if len(characterPage.IssueLinks) > concurrencyLimit {
+	if len(issuesToFetch) > concurrencyLimit {
 		poolLength = int(math.Ceil(float64(poolLength / concurrencyLimit)))
 		right = concurrencyLimit
 	} else {
@@ -78,11 +92,11 @@ func (s *CbExternalSource) Character(url string) (*Character, error) {
 	for i := 0; i <= poolLength; i++ {
 		var chunked []string
 		// if we're at the last chunk, make sure we grab the last X items
-		if left+concurrencyLimit > len(characterPage.IssueLinks) {
-			chunked = characterPage.IssueLinks[left:]
+		if left+concurrencyLimit > len(issuesToFetch) {
+			chunked = issuesToFetch[left:]
 			s.logger.Info(fmt.Sprintf("at offset %d: for %s", left, character.Name))
 		} else {
-			chunked = characterPage.IssueLinks[left:right]
+			chunked = issuesToFetch[left:right]
 			s.logger.Info(fmt.Sprintf("at offset %d:%d for %s", left, right, character.Name))
 		}
 		issueCh := make(chan *issueResult, len(chunked))
@@ -140,7 +154,6 @@ func (s *CbExternalSource) Character(url string) (*Character, error) {
 			}
 		}
 	}
-
 	return character, nil
 }
 

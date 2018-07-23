@@ -109,7 +109,9 @@ func TestCbExternalSource_CharacterFails(t *testing.T) {
 	}
 	config := &CbExternalSourceConfig{}
 	externalSource := NewCbExternalSource(ts.Client(), logger, config)
-	character, err := externalSource.Character(url)
+	character, err := externalSource.Character(url, func(issueId string) bool {
+		return true
+	})
 	assert.Nil(t, character)
 	assert.Error(t, err)
 }
@@ -129,7 +131,9 @@ func TestCbExternalSource_CharacterCyclops(t *testing.T) {
 		config: config,
 		logger: logger,
 	}
-	character, err := externalSource.Character(fmt.Sprintf("%s/character.php?ID=82321", ts.URL))
+	character, err := externalSource.Character(fmt.Sprintf("%s/character.php?ID=82321", ts.URL), func(issueId string) bool {
+		return true
+	})
 	if err != nil {
 		t.Error(err)
 	}
