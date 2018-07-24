@@ -37,13 +37,12 @@ type issueDates struct {
 
 // Represents a character's detailed paged.
 type CharacterPage struct {
-	Publisher  string   // The name of the publisher.
-	Title      string   // The title of the page
-	Name       string   // The name of the character
-	IssueLinks []string // Links to a character's issues.
+	Publisher       string          // The name of the publisher.
+	Title           string          // The title of the page
+	Name            string          // The name of the character
+	IssueLinks      []string        // Links to a character's issues.
 	OtherIdentities []CharacterLink // Links to other identities for the character.
 }
-
 
 // A link to a character with its URL and name from the search results.
 type CharacterLink struct {

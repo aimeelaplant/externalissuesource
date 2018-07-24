@@ -62,7 +62,7 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 	for _, issueLink := range characterPage.IssueLinks {
 		issueIdIndex := strings.LastIndex(issueLink, "=")
 		if issueIdIndex != -1 {
-			id := issueLink[issueIdIndex + 1:]
+			id := issueLink[issueIdIndex+1:]
 			if doFetchIssue(id) {
 				issuesToFetch = append(issuesToFetch, issueLink)
 			}

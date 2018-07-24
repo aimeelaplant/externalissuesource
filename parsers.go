@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/aimeelaplant/externalissuesource/internal/dateutil"
+	"github.com/aimeelaplant/externalissuesource/internal/stringutil"
 	"io"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"github.com/aimeelaplant/externalissuesource/internal/stringutil"
 )
 
 const (
@@ -23,7 +23,7 @@ var (
 	// ErrRecordNotFound record not found error, happens when haven't find any matched data when looking up with a struct
 	ErrMySqlConnect = errors.New("page returned mysql_connect() connection issue")
 	ErrParse        = errors.New("can't parse the page")
-	cbDatePrefixes = []string{
+	cbDatePrefixes  = []string{
 		"Mid ",
 		"Early ",
 		"Late ",

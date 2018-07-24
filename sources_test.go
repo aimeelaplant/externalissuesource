@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"testing"
 	"strings"
+	"testing"
 )
 
 var retryCallCount = 0
@@ -127,9 +127,9 @@ func TestCbExternalSource_CharacterCyclops(t *testing.T) {
 	parser := NewCbParser(ts.URL)
 	externalSource := CbExternalSource{
 		httpClient: ts.Client(),
-		parser: parser,
-		config: config,
-		logger: logger,
+		parser:     parser,
+		config:     config,
+		logger:     logger,
 	}
 	character, err := externalSource.Character(fmt.Sprintf("%s/character.php?ID=82321", ts.URL), func(issueId string) bool {
 		return true
@@ -157,7 +157,7 @@ func TestNewCbExternalSource_SearchCyclops(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	ts := httptest.NewServer(http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		file, err := os.Open("./testdata/cyclops/search.html")
 		if err != nil {
 			panic(err)
@@ -184,9 +184,9 @@ func TestNewCbExternalSource_SearchCyclops(t *testing.T) {
 	parser := NewCbParser(ts.URL)
 	externalSource := CbExternalSource{
 		httpClient: ts.Client(),
-		parser: parser,
-		config: config,
-		logger: logger,
+		parser:     parser,
+		config:     config,
+		logger:     logger,
 	}
 	searchResult, err := externalSource.SearchCharacter("cyclops")
 	if err != nil {
@@ -204,7 +204,7 @@ func TestNewCbExternalSource_SearchCyclopsFails(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	ts := httptest.NewServer(http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		assert.Equal(t, "/search.php", r.URL.Path)
 		assert.Equal(t, "cyclops", r.URL.Query().Get("form_search"))
@@ -222,9 +222,9 @@ func TestNewCbExternalSource_SearchCyclopsFails(t *testing.T) {
 	parser := NewCbParser(ts.URL)
 	externalSource := CbExternalSource{
 		httpClient: ts.Client(),
-		parser: parser,
-		config: config,
-		logger: logger,
+		parser:     parser,
+		config:     config,
+		logger:     logger,
 	}
 	_, err = externalSource.SearchCharacter("cyclops")
 	assert.Error(t, err)

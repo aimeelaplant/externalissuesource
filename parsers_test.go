@@ -186,10 +186,10 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	assert.Equal(t, "X-Men Forever (2009)", issue4.Series)
 	assert.Equal(t, "", issue4.Number)
 	assert.False(t, issue4.IsIssue)
-	assert.Equal(t, 2009,  issue4.PublicationDate.Year())
+	assert.Equal(t, 2009, issue4.PublicationDate.Year())
 	assert.Equal(t, time.April, issue4.PublicationDate.Month())
 	assert.Equal(t, 2009, issue4.OnSaleDate.Year())
-	assert.Equal(t, time.February,  issue4.OnSaleDate.Month())
+	assert.Equal(t, time.February, issue4.OnSaleDate.Month())
 }
 
 func TestCbParser_Error(t *testing.T) {
