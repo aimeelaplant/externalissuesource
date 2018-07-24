@@ -15,10 +15,24 @@ import (
 	"github.com/aimeelaplant/externalissuesource/internal/stringutil"
 )
 
+const (
+	regMonths = "(January|February|March|April|May|June|July|August|September|October|November|December)"
+)
+
 var (
 	// ErrRecordNotFound record not found error, happens when haven't find any matched data when looking up with a struct
 	ErrMySqlConnect = errors.New("page returned mysql_connect() connection issue")
 	ErrParse        = errors.New("can't parse the page")
+	cbDatePrefixes = []string{
+		"Mid ",
+		"Early ",
+		"Late ",
+		"Spring ",
+		"Summer ",
+		"Fall ",
+		"Winter ",
+		"Annual ",
+	}
 )
 
 type IssueParser interface {
@@ -154,28 +168,28 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 		}
 	})
 
+	var pubDate string
 	doc.Find("td").Children().Each(func(i int, s *goquery.Selection) {
 		hrefValue, ex := s.Attr("href")
 		if ex && strings.Contains(hrefValue, "coverdate.php") {
-			pubDate, err := time.Parse("January 2006", strings.TrimSpace(s.Text()))
-			if err == nil {
-				issue.PublicationDate = pubDate
-				// Determine the on sale date with 2 months ago.
+			dateText := strings.TrimSpace(s.Text())
+			for _, prefix := range cbDatePrefixes {
+				dateText = strings.TrimPrefix(dateText, prefix)
+			}
+			pubDate = dateText
+			format := ""
+			if regexp.MustCompile(fmt.Sprintf(`%s \d{4}`, regMonths)).MatchString(dateText) {
+				format = "January 2006"
+			} else if regexp.MustCompile(`^(\d{4})$`).MatchString(dateText) {
+				format = "2006"
+			} else if regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths)).MatchString(dateText) {
+				format = "January 2 2006"
+			}
+			pubDate, _ := time.Parse(format, dateText)
+			issue.PublicationDate = pubDate
+			if format != "2006" {
+				// Determine the on sale date was 2 months ago.
 				issue.OnSaleDate = pubDate.AddDate(0, -2, 0)
-			} else {
-				pubDate, err := time.Parse("2006", strings.TrimSpace(s.Text()))
-				if err == nil {
-					issue.PublicationDate = pubDate
-					issue.OnSaleDate = pubDate
-				} else {
-					pubDate, err := time.Parse("January 1 2006", strings.TrimSpace(s.Text()))
-					if err == nil {
-						issue.PublicationDate = pubDate
-						issue.PublicationDate = pubDate
-						// Determine the on sale date with 2 months ago.
-						issue.OnSaleDate = pubDate.AddDate(0, -2, 0)
-					}
-				}
 			}
 		}
 
@@ -221,6 +235,11 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 			issueNumber := pageHeadlineSelection.Text()[hashBangIndex+1:]
 			issue.Number = issueNumber
 		}
+	}
+
+	// If the publication date wasn't parsed, return an error.
+	if issue.PublicationDate.Year() <= 1 {
+		return nil, errors.New(fmt.Sprintf("could not parse publication date: %s", pubDate))
 	}
 
 	return issue, nil

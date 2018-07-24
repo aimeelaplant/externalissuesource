@@ -173,6 +173,10 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	assert.Equal(t, "X-Men: Empire's End (1997)", issue3.Series)
 	assert.Equal(t, "", issue3.Number)
 	assert.False(t, issue3.IsIssue)
+	assert.Equal(t, 1998, issue3.PublicationDate.Year())
+	assert.Equal(t, time.September, issue3.PublicationDate.Month())
+	assert.Equal(t, 1998, issue3.OnSaleDate.Year())
+	assert.Equal(t, time.July, issue3.OnSaleDate.Month())
 
 	file4, err4 := os.Open("./testdata/cb_issue_digital.html")
 	defer file4.Close()
@@ -182,6 +186,10 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	assert.Equal(t, "X-Men Forever (2009)", issue4.Series)
 	assert.Equal(t, "", issue4.Number)
 	assert.False(t, issue4.IsIssue)
+	assert.Equal(t, 2009,  issue4.PublicationDate.Year())
+	assert.Equal(t, time.April, issue4.PublicationDate.Month())
+	assert.Equal(t, 2009, issue4.OnSaleDate.Year())
+	assert.Equal(t, time.February,  issue4.OnSaleDate.Month())
 }
 
 func TestCbParser_Error(t *testing.T) {
@@ -210,7 +218,7 @@ func TestCbParser_Error(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCbParser_Issue(t *testing.T) {
+func TestCbParser_Character(t *testing.T) {
 	file, err := os.Open("./testdata/1.html")
 	if err != nil {
 		t.Errorf(err.Error())
@@ -221,4 +229,21 @@ func TestCbParser_Issue(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 	assert.Equal(t, "Emmaline Frost", i.Name)
+}
+
+func TestCbParser_Issue_Mid_Date(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_mid_date.html")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	i, err := parser.Issue(file)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	assert.True(t, i.Id != "")
+	assert.Equal(t, i.PublicationDate.Year(), 1989)
+	assert.Equal(t, i.OnSaleDate.Year(), 1989)
+	assert.Equal(t, i.PublicationDate.Month(), time.December)
+	assert.Equal(t, i.OnSaleDate.Month(), time.October)
 }
