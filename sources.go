@@ -169,6 +169,7 @@ func (s *CbExternalSource) SearchCharacter(query string) (CharacterSearchResult,
 	request.URL.RawQuery = q.Encode()
 	request.Header.Add("Cookie", fmt.Sprintf("PHPSESSID=%s", stringutil.RandString(26)))
 	response, err := s.httpClient.Do(request)
+	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		return CharacterSearchResult{}, errors.New(fmt.Sprintf("got bad status code from search: %d", response.StatusCode))
 	}

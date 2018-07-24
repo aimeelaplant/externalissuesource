@@ -92,18 +92,27 @@ func (p *CbParser) Character(body io.ReadCloser) (*CharacterPage, error) {
 
 	// Get the issue links
 	issueLinks := make([]string, 0)
+	otherIdentities := make([]CharacterLink, 0)
 	doc.Find("table").Each(func(i int, s *goquery.Selection) {
 		width, exists := s.Attr("width")
 		if exists && width == "884" {
 			s.Find("a").Each(func(i int, a *goquery.Selection) {
+				otherIdentitiesSectionIsEnded := false
+				if strings.Contains(a.Text(), "Issue Appearances") || strings.Contains(a.Text(), "Previous Character") || strings.Contains(a.Text(), "Next Character") {
+					otherIdentitiesSectionIsEnded = true
+				}
 				hrefValue, hrefExists := a.Attr("href")
 				if hrefExists && strings.Contains(hrefValue, "issue.php?ID=") {
 					issueLinks = append(issueLinks, fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue))
+				}
+				if hrefExists && strings.Contains(hrefValue, "character.php?ID=") && !otherIdentitiesSectionIsEnded {
+					otherIdentities = append(otherIdentities, CharacterLink{Url: fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue), Name: a.Text()})
 				}
 			})
 		}
 	})
 	characterPage.IssueLinks = issueLinks
+	characterPage.OtherIdentities = otherIdentities
 	return characterPage, nil
 }
 

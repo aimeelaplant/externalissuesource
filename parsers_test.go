@@ -247,3 +247,18 @@ func TestCbParser_Issue_Mid_Date(t *testing.T) {
 	assert.Equal(t, i.PublicationDate.Month(), time.December)
 	assert.Equal(t, i.OnSaleDate.Month(), time.October)
 }
+
+func TestCbParser_Character_With_Other_Identities(t *testing.T) {
+	file, err := os.Open("./testdata/cb_character_other_identities.html")
+	assert.Nil(t, err)
+	parser := CbParser{}
+	i, err := parser.Character(file)
+	assert.Nil(t, err)
+	assert.Len(t, i.OtherIdentities, 3)
+	assert.Equal(t, "Black Queen (Marvel)(05 - Emma Frost)", i.OtherIdentities[0].Name)
+	assert.Equal(t, "http://comicbookdb.com/character.php?ID=34860", i.OtherIdentities[0].Url)
+	assert.Equal(t, "Perfection (Marvel)", i.OtherIdentities[1].Name)
+	assert.Equal(t, "http://comicbookdb.com/character.php?ID=28653", i.OtherIdentities[1].Url)
+	assert.Equal(t, "White Queen (Marvel)(02 - Emma Frost)", i.OtherIdentities[2].Name)
+	assert.Equal(t, "http://comicbookdb.com/character.php?ID=3679", i.OtherIdentities[2].Url)
+}
