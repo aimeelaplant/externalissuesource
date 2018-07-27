@@ -17,7 +17,7 @@ func (c *Character) AddIssue(issue Issue) []Issue {
 // An issue, such as a comic book issue, with the publication date and sale date.
 type Issue struct {
 	Series          string
-	Vendor          string
+	Vendor          string	  // The publisher of the issue.
 	Id              string    // unique identifier for the issue.
 	Number          string    // The number of the issue - for example, Astonishing X-Men 1 with `1` being the issue number.
 	IsVariant       bool      // Whether it's a variant, 2nd printing, etc.

@@ -262,3 +262,23 @@ func TestCbParser_Character_With_Other_Identities(t *testing.T) {
 	assert.Equal(t, "White Queen (Marvel)(02 - Emma Frost)", i.OtherIdentities[2].Name)
 	assert.Equal(t, "http://comicbookdb.com/character.php?ID=3679", i.OtherIdentities[2].Url)
 }
+
+func TestCbParser_Issue_Foreign(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_deutschland.html")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.Equal(t, "6", issue.Number)
+	assert.True(t, issue.IsIssue)
+	assert.Equal(t, "352823", issue.Id)
+	assert.Equal(t, "50014", issue.SeriesId)
+	assert.Equal(t, "Action Comics (2001)", issue.Series)
+	assert.Equal(t, "Panini Verlags GmbH", issue.Vendor)
+	assert.Equal(t, 2002, int(issue.OnSaleDate.Year()))
+	assert.Equal(t, time.February, issue.OnSaleDate.Month())
+	assert.Equal(t, 2002, int(issue.PublicationDate.Year()))
+	assert.Equal(t, time.April, issue.PublicationDate.Month())
+}
