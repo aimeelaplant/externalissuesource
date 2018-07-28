@@ -14,10 +14,10 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/avast/retry-go"
   packages = ["."]
   revision = "611bd93c6d74b0575c569d7c3a13de46f65840ff"
-  version = "1.0.2"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -26,41 +26,16 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
-  version = "v1.2.2"
-
-[[projects]]
-  name = "go.uber.org/atomic"
-  packages = ["."]
-  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
-  version = "v1.3.2"
-
-[[projects]]
-  name = "go.uber.org/multierr"
-  packages = ["."]
-  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
-  version = "v1.1.0"
-
-[[projects]]
-  name = "go.uber.org/zap"
-  packages = [
-    ".",
-    "buffer",
-    "internal/bufferpool",
-    "internal/color",
-    "internal/exit",
-    "zapcore"
-  ]
-  revision = "eeedf312bc6c57391d84767a4cd413f02a917974"
-  version = "v1.8.0"
 
 [[projects]]
   branch = "master"
@@ -74,6 +49,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7f957688aa18d0defcdbdb7075b24b5ff155c1f4295606e6f3fdcc1571e54355"
+  inputs-digest = "011494122f8a1504c3a6409587d0412a7e6516cafe65871844f0fdccdad13077"
   solver-name = "gps-cdcl"
   solver-version = 1
