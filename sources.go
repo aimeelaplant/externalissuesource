@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/aimeelaplant/externalissuesource/internal/stringutil"
 	"github.com/avast/retry-go"
-	"go.uber.org/zap"
 	"math"
 	"net/http"
 	"strings"
@@ -32,7 +31,6 @@ type CbExternalSourceConfig struct {
 type CbExternalSource struct {
 	httpClient *http.Client
 	parser     ExternalSourceParser
-	logger     *zap.Logger
 	config     *CbExternalSourceConfig
 }
 
@@ -90,7 +88,6 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 	} else {
 		concurrencyLimit = s.config.WorkerPoolLimit
 	}
-	s.logger.Info(fmt.Sprintf("%d character links to parse for %s", poolLength, character.Name))
 	if len(issuesToFetch) > concurrencyLimit {
 		poolLength = int(math.Ceil(float64(poolLength / concurrencyLimit)))
 		right = concurrencyLimit
@@ -103,10 +100,8 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 		// if we're at the last chunk, make sure we grab the last X items
 		if left+concurrencyLimit > len(issuesToFetch) {
 			chunked = issuesToFetch[left:]
-			s.logger.Info(fmt.Sprintf("at offset %d: for %s", left, character.Name))
 		} else {
 			chunked = issuesToFetch[left:right]
-			s.logger.Info(fmt.Sprintf("at offset %d:%d for %s", left, right, character.Name))
 		}
 		issueCh := make(chan *issueResult, len(chunked))
 		left += concurrencyLimit
@@ -115,31 +110,26 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 			// Concurrently gets the page link to parse the page.
 			go func(x int) {
 				link := chunked[x]
-				s.logger.Info(fmt.Sprintf("started goroutine for %s", link))
+				fmt.Println(fmt.Sprintf("LINK %s", link))
 				retry.Do(func() error {
 					issueResp, err := s.httpClient.Get(link)
 					defer issueResp.Body.Close()
 					if err != nil {
-						s.logger.Fatal(fmt.Sprintf("error from %s: %s", link, err.Error()))
 						return err
 					}
 					if issueResp.StatusCode != http.StatusOK && issueResp.StatusCode != http.StatusNotModified {
 						if issueResp.StatusCode == http.StatusNotFound {
-							s.logger.Info(fmt.Sprintf("got status code %d from url %s. skipping.", issueResp.StatusCode, link))
 							issueCh <- &issueResult{Error: ErrIssueNotFound}
 							return nil
 						}
 						err = errors.New(fmt.Sprintf("got status code %d from url %s. retrying.", issueResp.StatusCode, link))
-						s.logger.Info(err.Error())
 						return err
 					}
 					issue, err := s.parser.Issue(issueResp.Body)
 					if err != nil {
 						if err == ErrMySqlConnect {
-							s.logger.Info(fmt.Sprintf("received connection issue from url: %s. error: %s. retrying.", link, err))
 							return err
 						} else {
-							s.logger.Error(fmt.Sprintf("got parse issue for %s:  %s", link, err.Error()))
 							issueCh <- &issueResult{Error: err}
 							return nil
 						}
@@ -154,11 +144,9 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 			if issueResult.Error != nil {
 				// all or nothing -- if there's an error, return it.
 				if issueResult.Error != ErrIssueNotFound {
-					s.logger.Error(issueResult.Error.Error())
 					return character, issueResult.Error
 				}
 			} else {
-				s.logger.Info(fmt.Sprintf("received %s", issueResult.Issue.Id))
 				character.AddIssue(*issueResult.Issue)
 			}
 		}
@@ -192,11 +180,10 @@ func (s *CbExternalSource) SearchCharacter(query string) (CharacterSearchResult,
 	return *characterSearchResult, nil
 }
 
-func NewCbExternalSource(httpClient *http.Client, logger *zap.Logger, config *CbExternalSourceConfig) ExternalSource {
+func NewCbExternalSource(httpClient *http.Client, config *CbExternalSourceConfig) ExternalSource {
 	return &CbExternalSource{
 		httpClient: httpClient,
 		parser:     &CbParser{},
-		logger:     logger,
 		config:     config,
 	}
 }

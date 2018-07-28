@@ -202,7 +202,6 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 		}
 	})
 
-	var pubDate string
 	doc.Find("td").Children().Each(func(i int, s *goquery.Selection) {
 		hrefValue, ex := s.Attr("href")
 		if ex && strings.Contains(hrefValue, "coverdate.php") {
@@ -219,17 +218,16 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 					issue.MonthUncertain = true
 				}
 			}
-			pubDate = dateText
 			format := ""
-			if regexp.MustCompile(fmt.Sprintf(`%s \d{4}`, regMonths)).MatchString(dateText) {
+			if regexp.MustCompile(fmt.Sprintf(`^%s \d{4}$`, regMonths)).MatchString(dateText) {
 				format = "January 2006"
+			} else if regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths)).MatchString(dateText) {
+				format = "January 2 2006"
+			} else if regexp.MustCompile(`^\w{3} \d{4}$`).MatchString(dateText) {
+				format = "Jan 2006"
 			} else if regexp.MustCompile(`^(\d{4})$`).MatchString(dateText) {
 				format = "2006"
 				issue.MonthUncertain = true
-			} else if regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths)).MatchString(dateText) {
-				format = "January 2 2006"
-			} else if regexp.MustCompile(`\w{3} \d{4}`).MatchString(dateText) {
-				format = "Jan 2006"
 			}
 			pubDate, _ := time.Parse(format, dateText)
 			issue.PublicationDate = pubDate
@@ -287,7 +285,8 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 
 	// If the publication date wasn't parsed, return an error.
 	if issue.PublicationDate.Year() <= 1 {
-		return nil, errors.New(fmt.Sprintf("could not parse publication date: %s", pubDate))
+		// TODO: Wtf? 
+		issue.MonthUncertain = true
 	}
 
 	return issue, nil
