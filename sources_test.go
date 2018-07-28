@@ -229,3 +229,72 @@ func TestNewCbExternalSource_SearchCyclopsFails(t *testing.T) {
 	_, err = externalSource.SearchCharacter("cyclops")
 	assert.Error(t, err)
 }
+
+func TestCbExternalSource_CharacterPage_Cyclops(t *testing.T) {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		t.Error(err)
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		file, err := os.Open("./testdata/cyclops/detail.html")
+		if err != nil {
+			panic(err)
+		}
+		bytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			panic(err)
+		}
+		w.Write(bytes)
+		w.WriteHeader(http.StatusOK)
+	}))
+	config := &CbExternalSourceConfig{}
+	parser := NewCbParser(ts.URL)
+	externalSource := CbExternalSource{
+		httpClient: ts.Client(),
+		parser:     parser,
+		config:     config,
+		logger:     logger,
+	}
+	character, err := externalSource.CharacterPage(fmt.Sprintf("%s/character.php?ID=82321", ts.URL))
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Len(t, character.OtherIdentities, 0)
+	assert.Equal(t, "Cyclops", character.Name)
+	assert.Equal(t, "Marvel", character.Publisher)
+	assert.Len(t, character.IssueLinks, 5)
+}
+
+func TestCbExternalSource_CharacterPage(t *testing.T) {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		t.Error(err)
+	}
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		file, err := os.Open("./testdata/cb_character_other_identities.html")
+		if err != nil {
+			panic(err)
+		}
+		bytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			panic(err)
+		}
+		w.Write(bytes)
+		w.WriteHeader(http.StatusOK)
+	}))
+	config := &CbExternalSourceConfig{}
+	parser := NewCbParser(ts.URL)
+	externalSource := CbExternalSource{
+		httpClient: ts.Client(),
+		parser:     parser,
+		config:     config,
+		logger:     logger,
+	}
+	character, err := externalSource.CharacterPage(fmt.Sprintf("%s/character.php?ID=82321", ts.URL))
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Len(t, character.OtherIdentities, 3)
+	assert.Equal(t, "Emma Grace Frost", character.Name)
+	assert.Equal(t, "Marvel", character.Publisher)
+}

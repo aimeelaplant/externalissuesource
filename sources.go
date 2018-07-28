@@ -40,20 +40,27 @@ type issueResult struct {
 	Error error
 }
 
-// Fetches the character from the URL and concurrently gets the issues that match true for the `doFetchIssue` callback.
-func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bool) (*Character, error) {
-	character := new(Character)
+// Fetches the character page.
+func (s *CbExternalSource) CharacterPage(url string) (*CharacterPage, error) {
+	characterPage := new(CharacterPage)
 	resp, err := s.httpClient.Get(url)
 	defer resp.Body.Close()
 	if err != nil {
-		return character, err
+		return nil, err
 	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, errors.New(fmt.Sprintf("character from URL %s not found.", url))
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("got bad status code from URL %s: %d", url, resp.StatusCode))
 	}
-	characterPage, err := s.parser.Character(resp.Body)
+	characterPage, err = s.parser.Character(resp.Body)
+	return characterPage, err
+}
+
+// Fetches the character from the URL and concurrently gets the issues that match true for the `doFetchIssue` callback.
+func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bool) (*Character, error) {
+	character := new(Character)
+	characterPage, err := s.CharacterPage(url)
 	if err != nil {
-		return character, err
+		return nil, err
 	}
 	character.Name = characterPage.Name
 	character.Publisher = characterPage.Publisher
