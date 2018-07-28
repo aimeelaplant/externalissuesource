@@ -18,6 +18,7 @@ var (
 )
 
 type ExternalSource interface {
+	CharacterPage(url string) (*CharacterPage, error)
 	Character(url string, doFetchIssue func(issueId string) bool) (*Character, error)
 	SearchCharacter(query string) (CharacterSearchResult, error)
 }
