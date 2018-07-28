@@ -139,7 +139,7 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 							s.logger.Info(fmt.Sprintf("received connection issue from url: %s. error: %s. retrying.", link, err))
 							return err
 						} else {
-							s.logger.Fatal(fmt.Sprintf("got parse issue for %s:  %s", link, err.Error()))
+							s.logger.Error(fmt.Sprintf("got parse issue for %s:  %s", link, err.Error()))
 							issueCh <- &issueResult{Error: err}
 							return nil
 						}

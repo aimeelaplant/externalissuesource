@@ -306,3 +306,21 @@ func TestCbParser_Issue_Dec_Jan(t *testing.T) {
 	assert.Equal(t, 1971, int(issue.PublicationDate.Year()))
 	assert.Equal(t, time.December, issue.PublicationDate.Month())
 }
+
+
+func TestCbParser_Issue_Year_Only(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_year_only.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.True(t, issue.MonthUncertain)
+	assert.Equal(t, 2014, issue.OnSaleDate.Year())
+	assert.Equal(t, 2014, issue.PublicationDate.Year())
+	assert.Equal(t, time.January, issue.PublicationDate.Month())
+	assert.Equal(t, time.January, issue.OnSaleDate.Month())
+	assert.False(t, issue.IsIssue)
+}

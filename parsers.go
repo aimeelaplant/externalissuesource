@@ -225,6 +225,7 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 				format = "January 2006"
 			} else if regexp.MustCompile(`^(\d{4})$`).MatchString(dateText) {
 				format = "2006"
+				issue.MonthUncertain = true
 			} else if regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths)).MatchString(dateText) {
 				format = "January 2 2006"
 			} else if regexp.MustCompile(`\w{3} \d{4}`).MatchString(dateText) {
@@ -235,6 +236,8 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 			if format != "2006" {
 				// Determine the on sale date was 2 months ago.
 				issue.OnSaleDate = pubDate.AddDate(0, -2, 0)
+			} else {
+				issue.OnSaleDate = pubDate
 			}
 		}
 
