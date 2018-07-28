@@ -25,8 +25,8 @@ type Issue struct {
 	PublicationDate time.Time // The cover date or publication date that the issue was published.
 	OnSaleDate      time.Time // The release date or on sale date that the issue was published.
 	SeriesId        string    // unique identifier for the series/title of the issue.
-	IsIssue         bool      // Sometimes an external source carries a TPB, graphic novel, or regular book.
-	// This flag indicates it's an actual comic book issue.
+	IsIssue         bool      // Sometimes an external source carries a TPB, graphic novel, or regular book. This flag indicates it's an actual comic book issue.
+	MonthUncertain  bool 	  // Sometimes an external source has the date of "annual", so in this case the month is uncertain.
 }
 
 // Issue dates for internal use for parsing a comics.org CSV.

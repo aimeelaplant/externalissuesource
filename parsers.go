@@ -32,6 +32,31 @@ var (
 		"Fall ",
 		"Winter ",
 		"Annual ",
+		"Jan/Feb ",
+		"Mar/Apr ",
+		"May/Jun ",
+		"Jul/Aug ",
+		"Sep/Oct ",
+		"Nov/Dec ",
+		"Holiday ",
+		"Dec/Jan ",
+		"Feb/Mar ",
+		"Apr/May ",
+		"Jun/Jul ",
+		"Aug/Sep ",
+		"Oct/Nov ",
+		"Jan/Mar ",
+		"Apr/Jun ",
+		"Jul/Sep ",
+		"Oct/Dec ",
+		"Feb/Apr ",
+		"May/Jul ",
+		"Aug/Oct ",
+		"Nov/Jan ",
+		"Mar/May ",
+		"Jun/Aug ",
+		"Sep/Nov ",
+		"Dec/Feb ",
 	}
 )
 
@@ -183,7 +208,16 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 		if ex && strings.Contains(hrefValue, "coverdate.php") {
 			dateText := strings.TrimSpace(s.Text())
 			for _, prefix := range cbDatePrefixes {
-				dateText = strings.TrimPrefix(dateText, prefix)
+				if !strings.Contains(dateText, "/") {
+					if strings.Contains(dateText, prefix) {
+						dateText = strings.TrimPrefix(dateText, prefix)
+						issue.MonthUncertain = true
+					}
+				} else {
+					dateText = dateText[0:strings.Index(dateText, "/")] + dateText[strings.Index(dateText, " "):]
+					// @TODO: Month may not be so uncertain!
+					issue.MonthUncertain = true
+				}
 			}
 			pubDate = dateText
 			format := ""
@@ -193,6 +227,8 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 				format = "2006"
 			} else if regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths)).MatchString(dateText) {
 				format = "January 2 2006"
+			} else if regexp.MustCompile(`\w{3} \d{4}`).MatchString(dateText) {
+				format = "Jan 2006"
 			}
 			pubDate, _ := time.Parse(format, dateText)
 			issue.PublicationDate = pubDate

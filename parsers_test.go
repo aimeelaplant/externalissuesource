@@ -90,6 +90,7 @@ func TestCoParser_determineSaleDate(t *testing.T) {
 
 func TestCbParser_parse(t *testing.T) {
 	file, err := os.Open("./testdata/cb_character.html")
+	defer file.Close()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -103,6 +104,7 @@ func TestCbParser_parse(t *testing.T) {
 
 func TestCbParser_Issue_TheEnd(t *testing.T) {
 	file, err := os.Open("./testdata/cb_issue_end.html")
+	defer file.Close()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -123,6 +125,7 @@ func TestCbParser_Issue_TheEnd(t *testing.T) {
 
 func TestCbParser_parseIssueLinks(t *testing.T) {
 	file, err := os.Open("./testdata/cb_character.html")
+	defer file.Close()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -194,6 +197,7 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 
 func TestCbParser_Error(t *testing.T) {
 	file, err := os.Open("./testdata/cb_error.html")
+	defer file.Close()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -220,6 +224,7 @@ func TestCbParser_Error(t *testing.T) {
 
 func TestCbParser_Character(t *testing.T) {
 	file, err := os.Open("./testdata/1.html")
+	defer file.Close()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -233,6 +238,7 @@ func TestCbParser_Character(t *testing.T) {
 
 func TestCbParser_Issue_Mid_Date(t *testing.T) {
 	file, err := os.Open("./testdata/cb_issue_mid_date.html")
+	defer file.Close()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -250,6 +256,7 @@ func TestCbParser_Issue_Mid_Date(t *testing.T) {
 
 func TestCbParser_Character_With_Other_Identities(t *testing.T) {
 	file, err := os.Open("./testdata/cb_character_other_identities.html")
+	defer file.Close()
 	assert.Nil(t, err)
 	parser := CbParser{}
 	i, err := parser.Character(file)
@@ -265,6 +272,7 @@ func TestCbParser_Character_With_Other_Identities(t *testing.T) {
 
 func TestCbParser_Issue_Foreign(t *testing.T) {
 	file, err := os.Open("./testdata/cb_issue_deutschland.html")
+	defer file.Close()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -281,4 +289,20 @@ func TestCbParser_Issue_Foreign(t *testing.T) {
 	assert.Equal(t, time.February, issue.OnSaleDate.Month())
 	assert.Equal(t, 2002, int(issue.PublicationDate.Year()))
 	assert.Equal(t, time.April, issue.PublicationDate.Month())
+}
+
+func TestCbParser_Issue_Dec_Jan(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_dec_jan.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.True(t, issue.MonthUncertain)
+	assert.Equal(t, 1971, int(issue.OnSaleDate.Year()))
+	assert.Equal(t, time.October, issue.OnSaleDate.Month())
+	assert.Equal(t, 1971, int(issue.PublicationDate.Year()))
+	assert.Equal(t, time.December, issue.PublicationDate.Month())
 }
