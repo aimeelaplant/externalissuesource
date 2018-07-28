@@ -7,6 +7,7 @@ type Character struct {
 	Publisher string
 	Name      string
 	Issues    []Issue
+	OtherIdentities []CharacterLink
 }
 
 func (c *Character) AddIssue(issue Issue) []Issue {

@@ -65,6 +65,7 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 	}
 	character.Name = characterPage.Name
 	character.Publisher = characterPage.Publisher
+	character.OtherIdentities = characterPage.OtherIdentities
 
 	issuesToFetch := make([]string, 0)
 	for _, issueLink := range characterPage.IssueLinks {
