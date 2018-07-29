@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"log"
 )
 
 const (
@@ -23,41 +24,53 @@ var (
 	// ErrRecordNotFound record not found error, happens when haven't find any matched data when looking up with a struct
 	ErrMySqlConnect = errors.New("page returned mysql_connect() connection issue")
 	ErrParse        = errors.New("can't parse the page")
-	cbDatePrefixes  = []string{
-		"Mid ",
-		"Early ",
-		"Late ",
-		"Spring ",
-		"Summer ",
-		"Fall ",
-		"Winter ",
-		"Annual ",
-		"Jan/Feb ",
-		"Mar/Apr ",
-		"May/Jun ",
-		"Jul/Aug ",
-		"Sep/Oct ",
-		"Nov/Dec ",
-		"Holiday ",
-		"Dec/Jan ",
-		"Feb/Mar ",
-		"Apr/May ",
-		"Jun/Jul ",
-		"Aug/Sep ",
-		"Oct/Nov ",
-		"Jan/Mar ",
-		"Apr/Jun ",
-		"Jul/Sep ",
-		"Oct/Dec ",
-		"Feb/Apr ",
-		"May/Jul ",
-		"Aug/Oct ",
-		"Nov/Jan ",
-		"Mar/May ",
-		"Jun/Aug ",
-		"Sep/Nov ",
-		"Dec/Feb ",
+	cdDatePrefixMap  = map[string]bool {
+		"Mid": true,
+		"Early": true,
+		"Late": true,
+		"Spring": true,
+		"Summer": true,
+		"Fall": true,
+		"Winter": true,
+		"Annual": true,
+		"Holiday": true,
+		"Jan/Feb": true, // keep year
+		"Mar/Apr": true,
+		"May/Jun": true,
+		"Jul/Aug": true,
+		"Sep/Oct": true,
+		"Nov/Dec": true,
+		"Dec/Jan": true, // keep year
+		"Feb/Mar": true, // keep year
+		"Apr/May": true,
+		"Jun/Jul": true,
+		"Aug/Sep": true,
+		"Oct/Nov": true,
+		"Jan/Mar": true, // keep year
+		"Apr/Jun": true,
+		"Jul/Sep": true,
+		"Oct/Dec": true,
+		"Feb/Apr": true,
+		"May/Jul": true,
+		"Aug/Oct": true,
+		"Nov/Jan": true, // keep year
+		"Mar/May": true,
+		"Jun/Aug": true,
+		"Sep/Nov": true,
+		"Dec/Feb": true, // keep year
 	}
+	keepYears = map[string]bool{
+		"Jan/Feb": true,
+		"Dec/Jan": true,
+		"Feb/Mar": true,
+		"Jan/Mar": true,
+		"Nov/Jan": true,
+		"Dec/Feb": true,
+	}
+	regMY = regexp.MustCompile(fmt.Sprintf(`^%s \d{4}$`, regMonths))
+	regMDY = regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths))
+	regmY = regexp.MustCompile(`^\w{3} \d{4}$`)
+	regY = regexp.MustCompile(`^(\d{4})$`)
 )
 
 type IssueParser interface {
@@ -205,37 +218,57 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 	doc.Find("td").Children().Each(func(i int, s *goquery.Selection) {
 		hrefValue, ex := s.Attr("href")
 		if ex && strings.Contains(hrefValue, "coverdate.php") {
+			dualDate := false
 			dateText := strings.TrimSpace(s.Text())
-			for _, prefix := range cbDatePrefixes {
-				if !strings.Contains(dateText, "/") {
-					if strings.Contains(dateText, prefix) {
-						dateText = strings.TrimPrefix(dateText, prefix)
-						issue.MonthUncertain = true
-					}
+			var trimmedDateText string
+			spaceIndex := strings.Index(dateText, " ")
+			if spaceIndex != -1 && cdDatePrefixMap[dateText[:spaceIndex]] {
+				if strings.Contains(dateText, "/") {
+					dualDate = true
+					trimmedDateText = dateText[strings.Index(dateText, "/")+1:]
 				} else {
-					dateText = dateText[0:strings.Index(dateText, "/")] + dateText[strings.Index(dateText, " "):]
-					// @TODO: Month may not be so uncertain!
 					issue.MonthUncertain = true
+					trimmedDateText = dateText[strings.Index(dateText, " ")+1:]
 				}
+			} else {
+				trimmedDateText = dateText
 			}
 			format := ""
-			if regexp.MustCompile(fmt.Sprintf(`^%s \d{4}$`, regMonths)).MatchString(dateText) {
+			if regMY.MatchString(trimmedDateText) {
 				format = "January 2006"
-			} else if regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths)).MatchString(dateText) {
+			} else if regMDY.MatchString(trimmedDateText) {
 				format = "January 2 2006"
-			} else if regexp.MustCompile(`^\w{3} \d{4}$`).MatchString(dateText) {
+			} else if regmY.MatchString(trimmedDateText) {
 				format = "Jan 2006"
-			} else if regexp.MustCompile(`^(\d{4})$`).MatchString(dateText) {
+			} else if regY.MatchString(trimmedDateText) {
 				format = "2006"
-				issue.MonthUncertain = true
 			}
-			pubDate, _ := time.Parse(format, dateText)
+			pubDate, err := time.Parse(format, trimmedDateText)
+			if err != nil {
+				// fail silently but log it.
+				log.Println(fmt.Sprintf("ERROR: %s", err))
+			}
 			issue.PublicationDate = pubDate
 			if format != "2006" {
 				// Determine the on sale date was 2 months ago.
-				issue.OnSaleDate = pubDate.AddDate(0, -2, 0)
+				if !dualDate {
+					issue.OnSaleDate = pubDate.AddDate(0, -2, 0)
+				} else {
+					// If it's a dual date, we wanna go 3 months back from the latest month.
+					// Check if we should keep the year for the issue.
+					if keepYears[dateText[0:7]] {
+						// Corrects the issues that fall within a new year, such as Dec/Jan 1971. CBDB lists the year for December and not
+						// the year for January. So we want January 1972 as the publication date and December 1971 as the sale date.
+						issue.PublicationDate = pubDate.AddDate(1, 0, 0)
+						issue.OnSaleDate = issue.PublicationDate.AddDate(0, -3, 0)
+					} else {
+						issue.PublicationDate = pubDate
+						issue.OnSaleDate = pubDate.AddDate(0, -3, 0)
+					}
+				}
 			} else {
-				issue.OnSaleDate = pubDate
+				issue.OnSaleDate = issue.PublicationDate
+				issue.MonthUncertain = true
 			}
 		}
 
@@ -259,8 +292,9 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 		}
 
 		s.Children().Each(func(i int, s *goquery.Selection) {
-			if strings.Contains(s.Text(), "Standard Comic Issue") {
-				issue.IsIssue = strings.Contains(s.Text(), "Standard Comic Issue")
+			isIssue := strings.Contains(s.Text(), "Standard Comic Issue")
+			if isIssue {
+				issue.IsIssue = isIssue
 			}
 			hrefValue, ex := s.Attr("href")
 			if ex && strings.Contains(hrefValue, "title.php") {
@@ -270,7 +304,6 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 				issue.Number = strings.TrimSpace(strings.TrimLeft(s.Text(), "#"))
 			}
 		})
-
 	})
 
 	// Get the issue number in case there was no link to the `issue_number.php` and it wasn't parsed.
@@ -282,13 +315,6 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 			issue.Number = issueNumber
 		}
 	}
-
-	// If the publication date wasn't parsed, return an error.
-	if issue.PublicationDate.Year() <= 1 {
-		// TODO: Wtf? 
-		issue.MonthUncertain = true
-	}
-
 	return issue, nil
 }
 

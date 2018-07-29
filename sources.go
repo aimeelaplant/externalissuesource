@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"strings"
+	"log"
 )
 
 const cbSearchPath = "/search.php"
@@ -100,8 +101,10 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 		// if we're at the last chunk, make sure we grab the last X items
 		if left+concurrencyLimit > len(issuesToFetch) {
 			chunked = issuesToFetch[left:]
+			log.Println(fmt.Sprintf("at offset %d: for %s", left, characterPage.Title))
 		} else {
 			chunked = issuesToFetch[left:right]
+			log.Println(fmt.Sprintf("at offset %d:%d for %s", left, right, characterPage.Title))
 		}
 		issueCh := make(chan *issueResult, len(chunked))
 		left += concurrencyLimit
@@ -110,7 +113,6 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 			// Concurrently gets the page link to parse the page.
 			go func(x int) {
 				link := chunked[x]
-				fmt.Println(fmt.Sprintf("LINK %s", link))
 				retry.Do(func() error {
 					issueResp, err := s.httpClient.Get(link)
 					defer issueResp.Body.Close()
@@ -119,18 +121,24 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 					}
 					if issueResp.StatusCode != http.StatusOK && issueResp.StatusCode != http.StatusNotModified {
 						if issueResp.StatusCode == http.StatusNotFound {
-							issueCh <- &issueResult{Error: ErrIssueNotFound}
+							log.Println(fmt.Sprintf("issue not found for %s", link))
+							// if the issue isn't found, just skip it.
+							issueCh <- &issueResult{}
 							return nil
 						}
 						err = errors.New(fmt.Sprintf("got status code %d from url %s. retrying.", issueResp.StatusCode, link))
+						log.Println(fmt.Sprintf("%s", err))
 						return err
 					}
 					issue, err := s.parser.Issue(issueResp.Body)
 					if err != nil {
 						if err == ErrMySqlConnect {
+							log.Println(fmt.Sprintf("got mysql connection issue for %s. retrying", link))
 							return err
 						} else {
-							issueCh <- &issueResult{Error: err}
+							log.Println(fmt.Sprintf("error returned for %s: %s", link, err))
+							// again, skip it.
+							issueCh <- &issueResult{}
 							return nil
 						}
 					}
@@ -141,12 +149,13 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 		}
 		for j := 0; j < len(chunked); j++ {
 			issueResult := <-issueCh
+			log.Println(fmt.Sprintf("received %v", issueResult.Issue))
 			if issueResult.Error != nil {
 				// all or nothing -- if there's an error, return it.
 				if issueResult.Error != ErrIssueNotFound {
 					return character, issueResult.Error
 				}
-			} else {
+			} else if issueResult.Issue != nil {
 				character.AddIssue(*issueResult.Issue)
 			}
 		}

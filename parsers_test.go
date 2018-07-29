@@ -163,7 +163,7 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	issue2, err3 := parser.Issue(file2)
 	assert.Nil(t, err3)
 	assert.Equal(t, issue2.Series, "X-Men: The Adventures of Cyclops and Phoenix (2014)")
-	assert.Equal(t, issue2.Number, "")
+	assert.Empty(t, issue2.Number)
 	assert.Equal(t, 2014, issue2.PublicationDate.Year())
 	assert.False(t, issue2.IsVariant)
 	assert.False(t, issue2.IsIssue)
@@ -300,13 +300,12 @@ func TestCbParser_Issue_Dec_Jan(t *testing.T) {
 	parser := CbParser{}
 	issue, err := parser.Issue(file)
 	assert.Nil(t, err)
-	assert.True(t, issue.MonthUncertain)
-	assert.Equal(t, 1971, int(issue.OnSaleDate.Year()))
+	assert.False(t, issue.MonthUncertain)
+	assert.Equal(t, 1971, issue.OnSaleDate.Year())
 	assert.Equal(t, time.October, issue.OnSaleDate.Month())
-	assert.Equal(t, 1971, int(issue.PublicationDate.Year()))
-	assert.Equal(t, time.December, issue.PublicationDate.Month())
+	assert.Equal(t, 1972, issue.PublicationDate.Year())
+	assert.Equal(t, time.January, issue.PublicationDate.Month())
 }
-
 
 func TestCbParser_Issue_Year_Only(t *testing.T) {
 	file, err := os.Open("./testdata/cb_issue_year_only.html")
@@ -324,3 +323,20 @@ func TestCbParser_Issue_Year_Only(t *testing.T) {
 	assert.Equal(t, time.January, issue.OnSaleDate.Month())
 	assert.False(t, issue.IsIssue)
 }
+
+func TestCbParser_Issue_Jul_Sep(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_jul_sep.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.False(t, issue.MonthUncertain)
+	assert.Equal(t, 1971, issue.OnSaleDate.Year())
+	assert.Equal(t, time.June, issue.OnSaleDate.Month())
+	assert.Equal(t, 1971, issue.PublicationDate.Year())
+	assert.Equal(t, time.September, issue.PublicationDate.Month())
+}
+
