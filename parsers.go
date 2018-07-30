@@ -74,19 +74,19 @@ var (
 )
 
 type IssueParser interface {
-	Parse(body io.ReadCloser) ([]Issue, error)
+	Parse(body io.Reader) ([]Issue, error)
 }
 
 type ExternalIssueParser interface {
-	Issue(body io.ReadCloser) (*Issue, error)
+	Issue(body io.Reader) (*Issue, error)
 }
 
 type ExternalCharacterParser interface {
-	Character(body io.ReadCloser) (*CharacterPage, error)
+	Character(body io.Reader) (*CharacterPage, error)
 }
 
 type ExternalCharacterSearchParser interface {
-	CharacterSearch(body io.ReadCloser) (*CharacterSearchResult, error)
+	CharacterSearch(body io.Reader) (*CharacterSearchResult, error)
 }
 
 // An interface that defines parsing entities from a remote external source.
@@ -103,8 +103,7 @@ type CbParser struct {
 }
 
 // Parses a character's page and returns the corresponding struct.
-// The caller is responsible for closing the body after it's done.
-func (p *CbParser) Character(body io.ReadCloser) (*CharacterPage, error) {
+func (p *CbParser) Character(body io.Reader) (*CharacterPage, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, ErrParse
@@ -163,8 +162,7 @@ func (p *CbParser) BaseUrl() string {
 }
 
 // Parses the links to character profiles and their names from the search page.
-// The caller is responsible for closing the body after it's done.
-func (p *CbParser) CharacterSearch(body io.ReadCloser) (*CharacterSearchResult, error) {
+func (p *CbParser) CharacterSearch(body io.Reader) (*CharacterSearchResult, error) {
 	characterSearchResult := new(CharacterSearchResult)
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
@@ -192,8 +190,7 @@ func (p *CbParser) CharacterSearch(body io.ReadCloser) (*CharacterSearchResult, 
 }
 
 // Parses an issue page and returns the corresponding struct.
-// The caller is responsible for closing the body after it's done.
-func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
+func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, ErrParse
@@ -318,7 +315,7 @@ func (p *CbParser) Issue(body io.ReadCloser) (*Issue, error) {
 	return issue, nil
 }
 
-func (p *CbParser) IssueLinks(body io.ReadCloser) ([]string, error) {
+func (p *CbParser) IssueLinks(body io.Reader) ([]string, error) {
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, ErrParse
@@ -351,7 +348,7 @@ type IssueResult struct {
 	Error error
 }
 
-func (p *CoParser) Parse(body io.ReadCloser) ([]Issue, error) {
+func (p *CoParser) Parse(body io.Reader) ([]Issue, error) {
 	issues, err := p.parseSlow(body)
 	if err != nil {
 		return nil, err
@@ -359,7 +356,7 @@ func (p *CoParser) Parse(body io.ReadCloser) ([]Issue, error) {
 	return issues, nil
 }
 
-func (p *CoParser) parseSlow(body io.ReadCloser) ([]Issue, error) {
+func (p *CoParser) parseSlow(body io.Reader) ([]Issue, error) {
 	r := csv.NewReader(bufio.NewReader(body))
 	var issues []Issue
 	var lineCount = 0
