@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestCoParser_cleanDateStrings(t *testing.T) {
@@ -340,3 +341,14 @@ func TestCbParser_Issue_Jul_Sep(t *testing.T) {
 	assert.Equal(t, time.September, issue.PublicationDate.Month())
 }
 
+func TestCbParser_Issue_ForeignChars(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_windows_1252.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.True(t, utf8.Valid([]byte(issue.Series)))
+}

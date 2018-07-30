@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 	"log"
+	"golang.org/x/text/encoding/charmap"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 
 var (
 	// ErrRecordNotFound record not found error, happens when haven't find any matched data when looking up with a struct
-	ErrMySqlConnect = errors.New("page returned mysql_connect() connection issue")
+	ErrConnection = errors.New("page returned connection issue")
 	ErrParse        = errors.New("can't parse the page")
 	cdDatePrefixMap  = map[string]bool {
 		"Mid": true,
@@ -71,6 +72,8 @@ var (
 	regMDY = regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths))
 	regmY = regexp.MustCompile(`^\w{3} \d{4}$`)
 	regY = regexp.MustCompile(`^(\d{4})$`)
+	// CBDB uses Windows 1252 encoding for their pages. Need to decode it all to UTF8!
+	cbDecoder = charmap.ISO8859_1.NewDecoder()
 )
 
 type IssueParser interface {
@@ -104,12 +107,13 @@ type CbParser struct {
 
 // Parses a character's page and returns the corresponding struct.
 func (p *CbParser) Character(body io.Reader) (*CharacterPage, error) {
-	doc, err := goquery.NewDocumentFromReader(body)
+	utf8Body := cbDecoder.Reader(body)
+	doc, err := goquery.NewDocumentFromReader(utf8Body)
 	if err != nil {
 		return nil, ErrParse
 	}
 	if strings.Contains(doc.Text(), "mysql_connect()") {
-		return nil, ErrMySqlConnect
+		return nil, ErrConnection
 	}
 	// Get the name, publisher, and title of page.
 	selection := doc.Find(".page_headline").Not("").First()
@@ -163,14 +167,15 @@ func (p *CbParser) BaseUrl() string {
 
 // Parses the links to character profiles and their names from the search page.
 func (p *CbParser) CharacterSearch(body io.Reader) (*CharacterSearchResult, error) {
-	characterSearchResult := new(CharacterSearchResult)
-	doc, err := goquery.NewDocumentFromReader(body)
+	utf8Body := cbDecoder.Reader(body)
+	doc, err := goquery.NewDocumentFromReader(utf8Body)
 	if err != nil {
 		return nil, ErrParse
 	}
 	if strings.Contains(doc.Text(), "mysql_connect()") {
-		return nil, ErrMySqlConnect
+		return nil, ErrConnection
 	}
+	characterSearchResult := new(CharacterSearchResult)
 	characterLinks := make([]CharacterLink, 0)
 	doc.Find("td").Each(func(i int, s *goquery.Selection) {
 		tdWidth, exists := s.Attr("width")
@@ -191,12 +196,13 @@ func (p *CbParser) CharacterSearch(body io.Reader) (*CharacterSearchResult, erro
 
 // Parses an issue page and returns the corresponding struct.
 func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
-	doc, err := goquery.NewDocumentFromReader(body)
+	utf8Body := cbDecoder.Reader(body)
+	doc, err := goquery.NewDocumentFromReader(utf8Body)
 	if err != nil {
 		return nil, ErrParse
 	}
 	if strings.Contains(doc.Text(), "mysql_connect()") {
-		return nil, ErrMySqlConnect
+		return nil, ErrConnection
 	}
 	issue := new(Issue)
 
@@ -316,12 +322,13 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 }
 
 func (p *CbParser) IssueLinks(body io.Reader) ([]string, error) {
-	doc, err := goquery.NewDocumentFromReader(body)
+	utf8Body := cbDecoder.Reader(body)
+	doc, err := goquery.NewDocumentFromReader(utf8Body)
 	if err != nil {
 		return nil, ErrParse
 	}
 	if strings.Contains(doc.Text(), "mysql_connect()") {
-		return nil, ErrMySqlConnect
+		return nil, ErrConnection
 	}
 	issueLinks := make([]string, 0)
 	doc.Find("table").Each(func(i int, s *goquery.Selection) {

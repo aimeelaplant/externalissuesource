@@ -132,7 +132,7 @@ func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bo
 					}
 					issue, err := s.parser.Issue(issueResp.Body)
 					if err != nil {
-						if err == ErrMySqlConnect {
+						if err == ErrConnection {
 							log.Println(fmt.Sprintf("got mysql connection issue for %s. retrying", link))
 							return err
 						} else {

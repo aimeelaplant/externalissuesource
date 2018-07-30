@@ -46,9 +46,23 @@
   ]
   revision = "d0887baf81f4598189d4e12a37c6da86f0bba4d0"
 
+[[projects]]
+  name = "golang.org/x/text"
+  packages = [
+    "encoding",
+    "encoding/charmap",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "internal/gen",
+    "transform",
+    "unicode/cldr"
+  ]
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "011494122f8a1504c3a6409587d0412a7e6516cafe65871844f0fdccdad13077"
+  inputs-digest = "cbc4b36ac17e6e04323775ff08906a9c1d389c68b1ec7317ab715344383745c7"
   solver-name = "gps-cdcl"
   solver-version = 1
