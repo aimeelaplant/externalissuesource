@@ -300,7 +300,6 @@ func TestCbExternalSource_CharacterPage(t *testing.T) {
 	assert.Equal(t, "Marvel", character.Publisher)
 }
 
-
 func TestCbExternalSource_Character_Maddog(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(HandleMadDogHttpCalls))
 	config := &CbExternalSourceConfig{}

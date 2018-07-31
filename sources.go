@@ -18,6 +18,7 @@ var (
 )
 
 type ExternalSource interface {
+	Issue(url string) (*Issue, error)
 	CharacterPage(url string) (*CharacterPage, error)
 	Character(url string, doFetchIssue func(issueId string) bool) (*Character, error)
 	SearchCharacter(query string) (CharacterSearchResult, error)
@@ -38,6 +39,24 @@ type CbExternalSource struct {
 type issueResult struct {
 	Issue *Issue
 	Error error
+}
+
+// Fetches an issue from the issue page.
+func (s *CbExternalSource) Issue(url string) (*Issue, error) {
+	var issue *Issue
+	resp, err := s.httpClient.Get(url)
+	defer resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("got bad status code from URL %s: %d", url, resp.StatusCode))
+	}
+	issue, err = s.parser.Issue(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return issue, nil
 }
 
 // Fetches the character page.

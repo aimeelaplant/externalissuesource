@@ -352,3 +352,15 @@ func TestCbParser_Issue_ForeignChars(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, utf8.Valid([]byte(issue.Series)))
 }
+
+func TestCbParser_Issue_Hc(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_hc.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.False(t, issue.IsIssue)
+}
