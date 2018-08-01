@@ -15,6 +15,7 @@ import (
 	"time"
 	"log"
 	"golang.org/x/text/encoding/charmap"
+	"github.com/andybalholm/cascadia"
 )
 
 const (
@@ -134,24 +135,37 @@ func (p *CbParser) Character(body io.Reader) (*CharacterPage, error) {
 	// Get the issue links
 	issueLinks := make([]string, 0)
 	otherIdentities := make([]CharacterLink, 0)
-	doc.Find("table").Each(func(i int, s *goquery.Selection) {
-		width, exists := s.Attr("width")
-		if exists && width == "884" {
-			s.Find("a").Each(func(i int, a *goquery.Selection) {
-				otherIdentitiesSectionIsEnded := false
-				if strings.Contains(a.Text(), "Issue Appearances") || strings.Contains(a.Text(), "Previous Character") || strings.Contains(a.Text(), "Next Character") {
-					otherIdentitiesSectionIsEnded = true
-				}
-				hrefValue, hrefExists := a.Attr("href")
-				if hrefExists && strings.Contains(hrefValue, "issue.php?ID=") {
-					issueLinks = append(issueLinks, fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue))
-				}
-				if hrefExists && strings.Contains(hrefValue, "character.php?ID=") && !otherIdentitiesSectionIsEnded {
-					otherIdentities = append(otherIdentities, CharacterLink{Url: fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue), Name: a.Text()})
-				}
-			})
+	matcher, err := cascadia.Compile("table[width=\"884\"]")
+	if err != nil {
+		return nil, err
+	}
+	matcher2, err := cascadia.Compile("strong, a")
+	if err != nil {
+		return nil, err
+	}
+	otherIdentitiesSection := false
+	issueAppearancesSection := false
+	doc.FindMatcher(matcher).FindMatcher(matcher2).Each(func(i int, s *goquery.Selection) {
+		text := s.Text()
+		if strings.Contains(text, "Other Identities:") {
+			otherIdentitiesSection = true
+		}
+		if strings.Contains(text, "Issue Appearances:") {
+			issueAppearancesSection = true
+			otherIdentitiesSection = false
+		}
+		hrefValue, hrefExists := s.Attr("href")
+		if hrefExists && strings.Contains(text, "Previous Character") || strings.Contains(text, "Next Character") {
+			issueAppearancesSection = false
+		}
+		if issueAppearancesSection && hrefExists && strings.HasPrefix(hrefValue, "issue.php?ID=") {
+			issueLinks = append(issueLinks, fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue))
+		}
+		if otherIdentitiesSection && hrefExists && strings.HasPrefix(hrefValue, "character.php?ID=") {
+			otherIdentities = append(otherIdentities, CharacterLink{Url: fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue), Name: s.Text()})
 		}
 	})
+
 	characterPage.IssueLinks = issueLinks
 	characterPage.OtherIdentities = otherIdentities
 	return characterPage, nil
@@ -177,17 +191,16 @@ func (p *CbParser) CharacterSearch(body io.Reader) (*CharacterSearchResult, erro
 	}
 	characterSearchResult := new(CharacterSearchResult)
 	characterLinks := make([]CharacterLink, 0)
-	doc.Find("td").Each(func(i int, s *goquery.Selection) {
-		tdWidth, exists := s.Attr("width")
-		// Only get the results from the main td.
-		if exists && tdWidth == "850" {
-			s.ChildrenFiltered("a").Each(func(i int, s2 *goquery.Selection) {
-				hrefValue, exists := s2.Attr("href")
-				if exists && strings.Contains(hrefValue, "character.php") {
-					characterLink := CharacterLink{Name: strings.TrimSpace(s2.Text()), Url: fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue)}
-					characterLinks = append(characterLinks, characterLink)
-				}
-			})
+
+	matcher, err := cascadia.Compile("td[width=\"850\"]")
+	if err != nil {
+		return nil, err
+	}
+	doc.FindMatcher(matcher).Find("a").Each(func(i int, s *goquery.Selection) {
+		hrefValue, exists := s.Attr("href")
+		if exists && strings.HasPrefix(hrefValue, "character.php") {
+			characterLink := CharacterLink{Name: strings.TrimSpace(s.Text()), Url: fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue)}
+			characterLinks = append(characterLinks, characterLink)
 		}
 	})
 	characterSearchResult.Results = characterLinks

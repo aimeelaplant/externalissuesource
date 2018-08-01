@@ -364,3 +364,27 @@ func TestCbParser_Issue_Hc(t *testing.T) {
 	assert.Nil(t, err)
 	assert.False(t, issue.IsIssue)
 }
+
+func TestCbParser_Character_Link_In_Bio(t *testing.T) {
+	file, err := os.Open("./testdata/cb_character_link_in_bio.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	c, err := parser.Character(file)
+	assert.Nil(t, err)
+	assert.Len(t, c.IssueLinks, 168)
+}
+
+func TestCbParser_CharacterSearch(t *testing.T) {
+	file, err := os.Open("./testdata/cyclops/search.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	c, err := parser.CharacterSearch(file)
+	assert.Nil(t, err)
+	assert.Len(t, c.Results, 46)
+}
