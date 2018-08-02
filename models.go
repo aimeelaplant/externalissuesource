@@ -2,6 +2,29 @@ package externalissuesource
 
 import "time"
 
+// Formats for an issue.
+type Format int
+
+// Formats for issues.
+const (
+	Standard Format = iota
+	TPB
+	Manga
+	HC
+	OGN
+	Web
+	Anthology
+	Bookshelf
+	Magazine
+	DigitalMedia
+	MiniComic
+	Prestige
+	Ashcan
+	Flipbook
+	Fanzine
+	Other
+)
+
 // A transformed object from a remote source with all the issues attached.
 type Character struct {
 	Publisher string
@@ -21,7 +44,8 @@ type Issue struct {
 	Vendor          string	  // The publisher of the issue.
 	Id              string    // unique identifier for the issue.
 	Number          string    // The number of the issue - for example, Astonishing X-Men 1 with `1` being the issue number.
-	IsVariant       bool      // Whether it's a variant, 2nd printing, etc.
+	Format          Format    // The type of issue.
+ 	IsVariant       bool      // Whether it's a variant, 2nd printing, etc.
 	PublicationDate time.Time // The cover date or publication date that the issue was published.
 	OnSaleDate      time.Time // The release date or on sale date that the issue was published.
 	SeriesId        string    // unique identifier for the series/title of the issue.

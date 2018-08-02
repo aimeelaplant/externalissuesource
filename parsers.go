@@ -75,6 +75,30 @@ var (
 	regY = regexp.MustCompile(`^(\d{4})$`)
 	// CBDB uses Windows 1252 encoding for their pages. Need to decode it all to UTF8!
 	cbDecoder = charmap.ISO8859_1.NewDecoder()
+	cbIssueFormats = map[Format]string{
+		Standard: "Standard Comic Issue",
+		TPB: "Trade Paperback",
+		Manga: "Manga",
+		HC: "Hardcover",
+		OGN: "Original Graphic Novel",
+		Web: "Webcomic",
+		Anthology: "Anthology",
+		Bookshelf: "Bookshelf",
+		Magazine: "Magazine",
+		DigitalMedia: "Digital Media",
+		MiniComic: "Minicomic",
+		Prestige: "Prestige Format",
+		Ashcan: "Ashcan",
+		Flipbook: "Flipbook",
+		Fanzine: "Fanzine",
+		Other: "Other Comic-Related Media",
+	}
+	cascadiaWidth884 = cascadia.MustCompile("table[width=\"884\"]")
+	cascadiaStrongA = cascadia.MustCompile("strong, a")
+	cascadiaWidth850 = cascadia.MustCompile("td[width=\"850\"]")
+	cascadiaCrazy = cascadia.MustCompile("body > table > tbody > tr:nth-child(2) > td:nth-child(3) > table > tbody > tr")
+	cascadiaAStrongSpan = cascadia.MustCompile("a, strong, span")
+	cascadiaColSpan3 = cascadia.MustCompile("td[colspan=\"3\"]")
 )
 
 type IssueParser interface {
@@ -135,17 +159,9 @@ func (p *CbParser) Character(body io.Reader) (*CharacterPage, error) {
 	// Get the issue links
 	issueLinks := make([]string, 0)
 	otherIdentities := make([]CharacterLink, 0)
-	matcher, err := cascadia.Compile("table[width=\"884\"]")
-	if err != nil {
-		return nil, err
-	}
-	matcher2, err := cascadia.Compile("strong, a")
-	if err != nil {
-		return nil, err
-	}
 	otherIdentitiesSection := false
 	issueAppearancesSection := false
-	doc.FindMatcher(matcher).FindMatcher(matcher2).Each(func(i int, s *goquery.Selection) {
+	doc.FindMatcher(cascadiaWidth884).FindMatcher(cascadiaStrongA).Each(func(i int, s *goquery.Selection) {
 		text := s.Text()
 		if strings.Contains(text, "Other Identities:") {
 			otherIdentitiesSection = true
@@ -192,11 +208,7 @@ func (p *CbParser) CharacterSearch(body io.Reader) (*CharacterSearchResult, erro
 	characterSearchResult := new(CharacterSearchResult)
 	characterLinks := make([]CharacterLink, 0)
 
-	matcher, err := cascadia.Compile("td[width=\"850\"]")
-	if err != nil {
-		return nil, err
-	}
-	doc.FindMatcher(matcher).Find("a").Each(func(i int, s *goquery.Selection) {
+	doc.FindMatcher(cascadiaWidth850).Find("a").Each(func(i int, s *goquery.Selection) {
 		hrefValue, exists := s.Attr("href")
 		if exists && strings.HasPrefix(hrefValue, "character.php") {
 			characterLink := CharacterLink{Name: strings.TrimSpace(s.Text()), Url: fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue)}
@@ -219,21 +231,12 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 	}
 	issue := new(Issue)
 
-	pageHeadlineSelection := doc.Find(".page_headline")
-
-	pageHeadlineSelection.Children().Each(func(i int, s *goquery.Selection) {
+	doc.FindMatcher(cascadiaCrazy).FindMatcher(cascadiaAStrongSpan).Each(func(i int, s *goquery.Selection) {
 		hrefValue, ex := s.Attr("href")
-		if ex && strings.Contains(hrefValue, "title.php") {
-			titleIdIndex := strings.LastIndex(hrefValue, "=")
-			if titleIdIndex != -1 {
-				issue.SeriesId = hrefValue[titleIdIndex+1:]
-			}
+		if issue.Vendor == "" && ex && strings.HasPrefix(hrefValue, "publisher.php"){
+			issue.Vendor = strings.TrimSpace(s.Text())
 		}
-	})
-
-	doc.Find("td").Children().Each(func(i int, s *goquery.Selection) {
-		hrefValue, ex := s.Attr("href")
-		if ex && strings.Contains(hrefValue, "coverdate.php") {
+		if issue.PublicationDate.Year() <= 1 && ex && strings.HasPrefix(hrefValue, "coverdate.php") {
 			dualDate := false
 			dateText := strings.TrimSpace(s.Text())
 			var trimmedDateText string
@@ -287,50 +290,73 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 				issue.MonthUncertain = true
 			}
 		}
-
-		// Get the ID of the issue.
-		if ex && strings.Contains(hrefValue, "issue_clone.php") {
-			equalSignIndex := strings.LastIndex(hrefValue, "=")
+		// Sometimes they lock cloning of the issue or editing the issue, so check the issue_history.php
+		// to get the ID of the issue.
+		if issue.Id == "" && ex && strings.HasPrefix(hrefValue, "issue_history.php") {
+			equalSignIndex := strings.Index(hrefValue, "=")
 			if equalSignIndex != -1 {
 				issue.Id = hrefValue[equalSignIndex+1:]
 			}
 		}
-
-		// Check if the issue is a variant.
+		if issue.SeriesId == "" && ex && strings.HasPrefix(hrefValue, "title.php") {
+			issue.Series = strings.TrimSpace(s.Text())
+			if equalIndex := strings.Index(hrefValue, "="); equalIndex != -1 {
+				issue.SeriesId = hrefValue[equalIndex+1:]
+			}
+		}
+		if issue.Number == "" && ex && strings.HasPrefix(hrefValue, "issue_number.php") {
+			issue.Number = strings.TrimSpace(strings.TrimLeft(s.Text(), "#"))
+		}
 		classValue, ex := s.Attr("class")
 		if ex && classValue == "page_subheadline test" {
-			r, _ := regexp.Compile("(Cover [A-Za-z])|(\\(2nd Printing\\))|(Variant)")
-			issue.IsVariant = r.MatchString(s.Text())
+			r := regexp.MustCompile("(Cover [A-Za-z])|(\\(2nd Printing\\))|(Variant)")
+			issue.IsVariant = r.MatchString(strings.TrimSpace(s.Text()))
 		}
-
-		if ex && strings.Contains(hrefValue, "publisher.php") {
-			issue.Vendor = strings.TrimSpace(s.Text())
+		if issue.Number == "" && ex && classValue == "page_headline" {
+			// Get the issue number.
+			hashBangIndex := strings.LastIndex(s.Text(), "#")
+			if hashBangIndex != -1 {
+				issueNumber := s.Text()[hashBangIndex+1:]
+				issue.Number = issueNumber
+			}
 		}
-
-		s.Children().Each(func(i int, s *goquery.Selection) {
-			isIssue := strings.Contains(s.Text(), "Standard Comic Issue")
-			if isIssue {
-				issue.IsIssue = isIssue
-			}
-			hrefValue, ex := s.Attr("href")
-			if ex && strings.Contains(hrefValue, "title.php") {
-				issue.Series = strings.TrimSpace(s.Text())
-			}
-			if ex && strings.Contains(hrefValue, "issue_number.php") {
-				issue.Number = strings.TrimSpace(strings.TrimLeft(s.Text(), "#"))
-			}
-		})
 	})
 
-	// Get the issue number in case there was no link to the `issue_number.php` and it wasn't parsed.
-	if issue.Number == "" {
-		// Get the issue number.
-		hashBangIndex := strings.LastIndex(pageHeadlineSelection.Text(), "#")
-		if hashBangIndex != -1 {
-			issueNumber := pageHeadlineSelection.Text()[hashBangIndex+1:]
-			issue.Number = issueNumber
+	foundFormat := false
+	doc.FindMatcher(cascadiaWidth850).FindMatcher(cascadiaColSpan3).Each(func(i int, s *goquery.Selection) {
+		trimmedText := strings.TrimSpace(s.Text())
+		formatIndex := strings.Index(trimmedText, "Format:")
+		semiColonIndex := strings.LastIndex(trimmedText, ";")
+		thereAreIndex := strings.Index(trimmedText, "There are")
+		formatText := ""
+		if formatIndex != -1 && semiColonIndex != -1 {
+			formatText = trimmedText[formatIndex:semiColonIndex]
+		}
+		if formatIndex != -1 && thereAreIndex != -1 {
+			formatText = trimmedText[formatIndex:thereAreIndex]
+		}
+		// If we didn't find it yet ...  grab all the text.
+		if formatText == "" && formatIndex != -1 {
+			formatText = trimmedText[formatIndex:]
+		}
+		if formatText != "" {
+			for format, s := range cbIssueFormats {
+				if strings.Contains(formatText, s) {
+					foundFormat = true
+					issue.Format = format
+					break
+				}
+			}
+		}
+	})
+	if !foundFormat {
+		log.Println(fmt.Sprintf("WARNING: Could not find format for %s", issue.Id))
+	} else {
+		if issue.Format == Standard {
+			issue.IsIssue = true
 		}
 	}
+
 	return issue, nil
 }
 
