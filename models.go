@@ -7,7 +7,8 @@ type Format int
 
 // Formats for issues.
 const (
-	Standard Format = iota
+	Unknown Format = iota
+	Standard
 	TPB
 	Manga
 	HC

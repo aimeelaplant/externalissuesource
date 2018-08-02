@@ -350,7 +350,7 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 		}
 	})
 	if !foundFormat {
-		log.Println(fmt.Sprintf("WARNING: Could not find format for %s", issue.Id))
+		issue.Format = Unknown
 	} else {
 		if issue.Format == Standard {
 			issue.IsIssue = true
