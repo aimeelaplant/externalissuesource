@@ -328,3 +328,10 @@ func TestCbExternalSource_Character_Maddog(t *testing.T) {
 		assert.True(t, issue.OnSaleDate.Year() > 1)
 	}
 }
+
+func TestAdultIssue(t *testing.T) {
+	cbdb := NewCbExternalSource(http.DefaultClient, &CbExternalSourceConfig{})
+	ish, err := cbdb.Issue("http://comicbookdb.com/issue.php?ID=234957")
+	assert.Nil(t, err)
+	assert.Equal(t, "234957", ish.Id)
+}

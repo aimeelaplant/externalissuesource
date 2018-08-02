@@ -44,7 +44,27 @@ type issueResult struct {
 // Fetches an issue from the issue page.
 func (s *CbExternalSource) Issue(url string) (*Issue, error) {
 	var issue *Issue
-	resp, err := s.httpClient.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("PHPSESSID", "0kq84qn373k5ou2gl91ikbmv57")
+	cookie0 := &http.Cookie{
+		Name: "PHPSESSID",
+		Value: "0kq84qn373k5ou2gl91ikbmv57",
+	}
+	cookie1 := &http.Cookie{
+		Name: "cbdb1",
+		Value: "42890",
+	}
+	cookie2 := &http.Cookie{
+		Name: "cbdb2",
+		Value: "7cc7d95e222e8f479f4fad58604f61b5",
+	}
+	req.AddCookie(cookie0)
+	req.AddCookie(cookie1)
+	req.AddCookie(cookie2)
+	resp, err := s.httpClient.Do(req)
 	defer resp.Body.Close()
 	if err != nil {
 		return nil, err
