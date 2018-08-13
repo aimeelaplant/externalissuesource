@@ -414,3 +414,18 @@ func TestCbParser_Issue_No_Edit(t *testing.T) {
 	assert.True(t, issue.IsIssue)
 	assert.Equal(t, Standard, issue.Format)
 }
+
+func TestCbParser_Issue_Annual(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_annual.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.Equal(t, "28458", issue.Id)
+	assert.True(t, issue.IsIssue)
+	assert.Equal(t, Standard, issue.Format)
+	assert.Equal(t, "Annual '96", issue.Number)
+}

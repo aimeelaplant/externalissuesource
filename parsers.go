@@ -304,9 +304,6 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 				issue.SeriesId = hrefValue[equalIndex+1:]
 			}
 		}
-		if issue.Number == "" && ex && strings.HasPrefix(hrefValue, "issue_number.php") {
-			issue.Number = strings.TrimSpace(strings.TrimLeft(s.Text(), "#"))
-		}
 		classValue, ex := s.Attr("class")
 		if ex && classValue == "page_subheadline test" {
 			r := regexp.MustCompile("(Cover [A-Za-z])|(\\(2nd Printing\\))|(Variant)")
@@ -314,10 +311,13 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 		}
 		if issue.Number == "" && ex && classValue == "page_headline" {
 			// Get the issue number.
-			hashBangIndex := strings.LastIndex(s.Text(), "#")
-			if hashBangIndex != -1 {
-				issueNumber := s.Text()[hashBangIndex+1:]
-				issue.Number = issueNumber
+			text := strings.TrimSpace(s.Text())
+			if hashBangIndex := strings.LastIndex(text, "#"); hashBangIndex != -1 {
+				issue.Number = text[hashBangIndex+1:]
+			} else if strings.Contains(text, " - Annual") {
+				if annualIndex := strings.LastIndex(text, "Annual"); annualIndex != -1 {
+					issue.Number = text[annualIndex:]
+				}
 			}
 		}
 	})

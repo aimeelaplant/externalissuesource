@@ -48,10 +48,10 @@ func (s *CbExternalSource) Issue(url string) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("PHPSESSID", "0kq84qn373k5ou2gl91ikbmv57")
+	req.Header.Add("PHPSESSID", "43lc83m4e51adm1u0v0c13j3j6")
 	cookie0 := &http.Cookie{
 		Name: "PHPSESSID",
-		Value: "0kq84qn373k5ou2gl91ikbmv57",
+		Value: "43lc83m4e51adm1u0v0c13j3j6",
 	}
 	cookie1 := &http.Cookie{
 		Name: "cbdb1",
@@ -65,10 +65,10 @@ func (s *CbExternalSource) Issue(url string) (*Issue, error) {
 	req.AddCookie(cookie1)
 	req.AddCookie(cookie2)
 	resp, err := s.httpClient.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(fmt.Sprintf("got bad status code from URL %s: %d", url, resp.StatusCode))
 	}
@@ -83,10 +83,10 @@ func (s *CbExternalSource) Issue(url string) (*Issue, error) {
 func (s *CbExternalSource) CharacterPage(url string) (*CharacterPage, error) {
 	characterPage := new(CharacterPage)
 	resp, err := s.httpClient.Get(url)
-	defer resp.Body.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New(fmt.Sprintf("got bad status code from URL %s: %d", url, resp.StatusCode))
 	}
@@ -214,12 +214,12 @@ func (s *CbExternalSource) SearchCharacter(query string) (CharacterSearchResult,
 	request.URL.RawQuery = q.Encode()
 	request.Header.Add("Cookie", fmt.Sprintf("PHPSESSID=%s", stringutil.RandString(26)))
 	response, err := s.httpClient.Do(request)
+	if err != nil {
+		return CharacterSearchResult{}, err
+	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		return CharacterSearchResult{}, errors.New(fmt.Sprintf("got bad status code from search: %d", response.StatusCode))
-	}
-	if err != nil {
-		return CharacterSearchResult{}, err
 	}
 	characterSearchResult, err := s.parser.CharacterSearch(response.Body)
 	if err != nil {
