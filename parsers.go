@@ -327,7 +327,7 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 		trimmedText := strings.TrimSpace(s.Text())
 		formatIndex := strings.Index(trimmedText, "Format:")
 		semiColonIndex := strings.LastIndex(trimmedText, ";")
-		thereAreIndex := strings.Index(trimmedText, "There are")
+		thereAreIndex := strings.Index(trimmedText, "Story Arc(s)")
 		formatText := ""
 		if formatIndex != -1 && semiColonIndex != -1 {
 			formatText = trimmedText[formatIndex:semiColonIndex]

@@ -335,3 +335,22 @@ func TestAdultIssue(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "234957", ish.Id)
 }
+
+func TestThereAre(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		file, err := os.Open("./testdata/cb_issue_there_are.html")
+		if err != nil {
+			panic(err)
+		}
+		bytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			panic(err)
+		}
+		w.Write(bytes)
+		w.WriteHeader(http.StatusOK)
+	}))
+	cbdb := NewCbExternalSource(ts.Client(), &CbExternalSourceConfig{})
+	ish, err := cbdb.Issue(ts.URL)
+	assert.Nil(t, err)
+	assert.Equal(t, HC, ish.Format)
+}
