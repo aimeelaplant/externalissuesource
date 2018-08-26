@@ -8,14 +8,9 @@ import (
 	"strings"
 	"net"
 	"time"
-	"net/url"
 )
 
 const cbSearchPath = "/search.php"
-const cbLoginUrl = "http://comicbookdb.com/login.php"
-var cbdbUrl = &url.URL{
-	Host: "http://comicbookdb.com",
-}
 
 type ExternalSource interface {
 	Issue(url string) (*Issue, error)
