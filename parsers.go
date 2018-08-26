@@ -1,16 +1,11 @@
 package externalissuesource
 
 import (
-	"bufio"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/aimeelaplant/externalissuesource/internal/dateutil"
-	"github.com/aimeelaplant/externalissuesource/internal/stringutil"
 	"io"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 	"log"
@@ -19,6 +14,7 @@ import (
 )
 
 const (
+	cbUrl = "http://comicbookdb.com"
 	regMonths = "(January|February|March|April|May|June|July|August|September|October|November|December)"
 )
 
@@ -382,146 +378,6 @@ func (p *CbParser) IssueLinks(body io.Reader) ([]string, error) {
 		}
 	})
 	return issueLinks, nil
-}
-
-type CoParser struct {
-}
-
-const cbUrl = "http://comicbookdb.com"
-
-type IssueResult struct {
-	Issue *Issue
-	Error error
-}
-
-func (p *CoParser) Parse(body io.Reader) ([]Issue, error) {
-	issues, err := p.parseSlow(body)
-	if err != nil {
-		return nil, err
-	}
-	return issues, nil
-}
-
-func (p *CoParser) parseSlow(body io.Reader) ([]Issue, error) {
-	r := csv.NewReader(bufio.NewReader(body))
-	var issues []Issue
-	var lineCount = 0
-	// File gets streamed in memory ... OK for now.
-	lines, err := r.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-	for _, line := range lines {
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			break
-		}
-		if lineCount == 0 {
-			lineCount++
-			continue
-		}
-		lineCount++
-		issue, err := p.parseLine(line)
-		if err == nil && !issue.IsVariant {
-			issues = append(issues, *issue)
-		}
-	}
-	return issues, nil
-}
-
-func (p *CoParser) parseLine(line []string) (*Issue, error) {
-	id, err := strconv.ParseInt(strings.TrimSpace(line[0]), 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	seriesId, err := strconv.ParseInt(strings.TrimSpace(line[30]), 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	// line[17] = publication date, line[18] = key date, line[19] = sale date
-	publicationDate, err := p.getBestDate(line[17], line[18])
-	if err != nil {
-		return nil, err
-	}
-	onSaleDate, err := p.determineSaleDate(issueDates{
-		OnSaleDate:      line[19],
-		PublicationDate: line[17],
-		KeyDate:         line[18],
-	})
-	if err != nil {
-		return nil, err
-	}
-	searchResultRow := Issue{
-		Vendor:          "comics.org",
-		Id:              string(id),
-		Number:          strings.TrimSpace(line[1]),
-		IsVariant:       len(strings.TrimSpace(line[11])) > 0,
-		OnSaleDate:      onSaleDate,
-		SeriesId:        string(seriesId),
-		PublicationDate: publicationDate,
-	}
-	return &searchResultRow, nil
-}
-
-func (p *CoParser) determineSaleDate(dateObj issueDates) (time.Time, error) {
-	publicationDate, err := p.getBestDate(dateObj.PublicationDate, dateObj.KeyDate)
-	if err != nil {
-		return publicationDate, err
-	}
-	if dateObj.OnSaleDate != "" {
-		saleDate, err := p.getBestDate(dateObj.OnSaleDate)
-		if err != nil {
-			return saleDate, err
-		}
-		if dateutil.CompareMonths(saleDate, publicationDate) <= -2 {
-			return saleDate, nil
-		}
-	}
-	return publicationDate.AddDate(0, -2, 0), nil
-}
-
-func (p *CoParser) cleanDateStrings(date string) string {
-	var trim []string
-	trim = append(trim, "[", "]", "Early", "Late")
-	return stringutil.TrimStrings(date, trim)
-}
-
-func (p *CoParser) getBestDate(dates ...string) (time.Time, error) {
-	for _, dateString := range dates {
-		dateString := p.cleanDateStrings(dateString)
-		if dateString == "" || len(dateString) < 7 {
-			continue
-		}
-		// case when date has -
-		if strings.Contains(dateString, "-") {
-			// 2006-07
-			if len(dateString) == 7 {
-				if strings.Contains(dateString, "-00") {
-					return time.Parse("2006", strings.TrimSuffix(dateString, "-00"))
-				} else {
-					return time.Parse("2006-01", dateString)
-				}
-			} else {
-				if strings.Contains(dateString, "-00") {
-					date, err := time.Parse("2006-01", strings.TrimSuffix(dateString, "-00"))
-					if err != nil {
-						return time.Parse("2006", strings.Replace(dateString, "-00", "", -1))
-					}
-					return date, nil
-				}
-				return time.Parse("2006-01-02", dateString)
-			}
-		} else {
-			return time.Parse("January 2006", dateString)
-		}
-	}
-	return time.Now(), errors.New("cannot parse the date strings")
-}
-
-func NewCoParser() IssueParser {
-	CoParser := CoParser{}
-	return &CoParser
 }
 
 func NewCbParser(baseUrl string) ExternalSourceParser {

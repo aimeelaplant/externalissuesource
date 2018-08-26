@@ -14,12 +14,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/avast/retry-go"
-  packages = ["."]
-  revision = "611bd93c6d74b0575c569d7c3a13de46f65840ff"
-
-[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -63,6 +57,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f9a73f0314582a15b5dcdb801ab7df5ed025b1d4e0263e110a96ed78f6b5c5ed"
+  inputs-digest = "848b9129046ac18f562157f0ae882b0715e53e92303491143cff89418aa59304"
   solver-name = "gps-cdcl"
   solver-version = 1

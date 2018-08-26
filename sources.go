@@ -4,42 +4,39 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aimeelaplant/externalissuesource/internal/stringutil"
-	"github.com/avast/retry-go"
-	"math"
 	"net/http"
 	"strings"
-	"log"
+	"net"
+	"time"
+	"net/url"
 )
 
 const cbSearchPath = "/search.php"
-
-var (
-	ErrIssueNotFound = errors.New("issue URL not found")
-)
+const cbLoginUrl = "http://comicbookdb.com/login.php"
+var cbdbUrl = &url.URL{
+	Host: "http://comicbookdb.com",
+}
 
 type ExternalSource interface {
 	Issue(url string) (*Issue, error)
 	CharacterPage(url string) (*CharacterPage, error)
-	Character(url string, doFetchIssue func(issueId string) bool) (*Character, error)
 	SearchCharacter(query string) (CharacterSearchResult, error)
 }
 
 // Configuration options
 type CbExternalSourceConfig struct {
-	WorkerPoolLimit int            // Default is 20. Limit the amount of goroutines to parse issues for a character.
-	RetryOpts       []retry.Option // A slice of options for retrying when getting an issue fails.
+	SessionId string
+	CbOne string
+	CbTwo string
 }
 
 type CbExternalSource struct {
 	httpClient *http.Client
 	parser     ExternalSourceParser
 	config     *CbExternalSourceConfig
+	isLoggedIn bool
 }
 
-type issueResult struct {
-	Issue *Issue
-	Error error
-}
 
 // Fetches an issue from the issue page.
 func (s *CbExternalSource) Issue(url string) (*Issue, error) {
@@ -48,22 +45,19 @@ func (s *CbExternalSource) Issue(url string) (*Issue, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("PHPSESSID", "43lc83m4e51adm1u0v0c13j3j6")
-	cookie0 := &http.Cookie{
+	req.Header.Add("PHPSESSID", s.config.SessionId)
+	req.AddCookie(&http.Cookie{
 		Name: "PHPSESSID",
-		Value: "43lc83m4e51adm1u0v0c13j3j6",
-	}
-	cookie1 := &http.Cookie{
+		Value: s.config.SessionId,
+	})
+	req.AddCookie(&http.Cookie{
 		Name: "cbdb1",
-		Value: "42890",
-	}
-	cookie2 := &http.Cookie{
+		Value: s.config.CbOne,
+	})
+	req.AddCookie(&http.Cookie{
 		Name: "cbdb2",
-		Value: "7cc7d95e222e8f479f4fad58604f61b5",
-	}
-	req.AddCookie(cookie0)
-	req.AddCookie(cookie1)
-	req.AddCookie(cookie2)
+		Value: s.config.CbTwo,
+	})
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -92,114 +86,6 @@ func (s *CbExternalSource) CharacterPage(url string) (*CharacterPage, error) {
 	}
 	characterPage, err = s.parser.Character(resp.Body)
 	return characterPage, err
-}
-
-// Fetches the character from the URL and concurrently gets the issues that match true for the `doFetchIssue` callback.
-func (s *CbExternalSource) Character(url string, doFetchIssue func(id string) bool) (*Character, error) {
-	character := new(Character)
-	characterPage, err := s.CharacterPage(url)
-	if err != nil {
-		return nil, err
-	}
-	character.Name = characterPage.Name
-	character.Publisher = characterPage.Publisher
-	character.OtherIdentities = characterPage.OtherIdentities
-
-	issuesToFetch := make([]string, 0)
-	for _, issueLink := range characterPage.IssueLinks {
-		issueIdIndex := strings.LastIndex(issueLink, "=")
-		if issueIdIndex != -1 {
-			id := issueLink[issueIdIndex+1:]
-			if doFetchIssue(id) {
-				issuesToFetch = append(issuesToFetch, issueLink)
-			}
-		} else {
-			return nil, errors.New(fmt.Sprintf("can't get issue ID from %s", issueLink))
-		}
-	}
-
-	// setup a worker pool of about 20 links per pool
-	poolLength := len(issuesToFetch)
-	left := 0
-	right := 0
-	var concurrencyLimit int
-	if s.config.WorkerPoolLimit == 0 {
-		concurrencyLimit = 20
-	} else {
-		concurrencyLimit = s.config.WorkerPoolLimit
-	}
-	if len(issuesToFetch) > concurrencyLimit {
-		poolLength = int(math.Ceil(float64(poolLength / concurrencyLimit)))
-		right = concurrencyLimit
-	} else {
-		right = 1
-		concurrencyLimit = 1
-	}
-	for i := 0; i <= poolLength; i++ {
-		var chunked []string
-		// if we're at the last chunk, make sure we grab the last X items
-		if left+concurrencyLimit > len(issuesToFetch) {
-			chunked = issuesToFetch[left:]
-			log.Println(fmt.Sprintf("at offset %d: for %s", left, characterPage.Title))
-		} else {
-			chunked = issuesToFetch[left:right]
-			log.Println(fmt.Sprintf("at offset %d:%d for %s", left, right, characterPage.Title))
-		}
-		issueCh := make(chan *issueResult, len(chunked))
-		left += concurrencyLimit
-		right += concurrencyLimit
-		for x := range chunked {
-			// Concurrently gets the page link to parse the page.
-			go func(x int) {
-				link := chunked[x]
-				retry.Do(func() error {
-					issueResp, err := s.httpClient.Get(link)
-					defer issueResp.Body.Close()
-					if err != nil {
-						return err
-					}
-					if issueResp.StatusCode != http.StatusOK && issueResp.StatusCode != http.StatusNotModified {
-						if issueResp.StatusCode == http.StatusNotFound {
-							log.Println(fmt.Sprintf("issue not found for %s", link))
-							// if the issue isn't found, just skip it.
-							issueCh <- &issueResult{}
-							return nil
-						}
-						err = errors.New(fmt.Sprintf("got status code %d from url %s. retrying.", issueResp.StatusCode, link))
-						log.Println(fmt.Sprintf("%s", err))
-						return err
-					}
-					issue, err := s.parser.Issue(issueResp.Body)
-					if err != nil {
-						if err == ErrConnection {
-							log.Println(fmt.Sprintf("got mysql connection issue for %s. retrying", link))
-							return err
-						} else {
-							log.Println(fmt.Sprintf("error returned for %s: %s", link, err))
-							// again, skip it.
-							issueCh <- &issueResult{}
-							return nil
-						}
-					}
-					issueCh <- &issueResult{Issue: issue}
-					return nil
-				}, s.config.RetryOpts...)
-			}(x)
-		}
-		for j := 0; j < len(chunked); j++ {
-			issueResult := <-issueCh
-			log.Println(fmt.Sprintf("received %v", issueResult.Issue))
-			if issueResult.Error != nil {
-				// all or nothing -- if there's an error, return it.
-				if issueResult.Error != ErrIssueNotFound {
-					return character, issueResult.Error
-				}
-			} else if issueResult.Issue != nil {
-				character.AddIssue(*issueResult.Issue)
-			}
-		}
-	}
-	return character, nil
 }
 
 // Performs a search on the provided query and returns the search result for found characters.
@@ -234,4 +120,24 @@ func NewCbExternalSource(httpClient *http.Client, config *CbExternalSourceConfig
 		parser:     &CbParser{},
 		config:     config,
 	}
+}
+
+func NewHttpClient() (*http.Client) {
+	tp := http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   45 * time.Second,
+			KeepAlive: 90 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          10,
+		IdleConnTimeout:       30 * time.Second,
+		TLSHandshakeTimeout:   30 * time.Second,
+		ExpectContinueTimeout: 10 * time.Second,
+	}
+	client := &http.Client{
+		Transport: &tp,
+		Timeout: 45 * time.Second,
+	}
+	return client
 }
