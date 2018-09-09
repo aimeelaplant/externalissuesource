@@ -13,3 +13,5 @@ RUN dep version
 RUN mkdir /gocode/
 
 ENV GOPATH /gocode/
+
+RUN go install github.com/golang/mock/mockgen

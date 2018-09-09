@@ -338,10 +338,6 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 	})
 	if !foundFormat {
 		issue.Format = Unknown
-	} else {
-		if issue.Format == Standard {
-			issue.IsIssue = true
-		}
 	}
 
 	return issue, nil

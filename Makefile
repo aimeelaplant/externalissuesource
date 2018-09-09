@@ -19,3 +19,6 @@ test:
 
 format:
 	${DOCKER_RUN} go fmt ./
+
+mockgen:
+	mockgen -destination=mocks/sources.go -source=sources.go && mockgen -destination=mocks/parsers.go -source=parsers.go
