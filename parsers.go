@@ -69,8 +69,6 @@ var (
 	regMDY = regexp.MustCompile(fmt.Sprintf(`^%s \d{1,2} \d{4}$`, regMonths))
 	regmY = regexp.MustCompile(`^\w{3} \d{4}$`)
 	regY = regexp.MustCompile(`^(\d{4})$`)
-	// CBDB uses Windows 1252 encoding for their pages. Need to decode it all to UTF8!
-	cbDecoder = charmap.ISO8859_1.NewDecoder()
 	cbIssueFormats = map[Format]string{
 		Standard: "Standard Comic Issue",
 		TPB: "Trade Paperback",
@@ -89,12 +87,6 @@ var (
 		Fanzine: "Fanzine",
 		Other: "Other Comic-Related Media",
 	}
-	cascadiaWidth884 = cascadia.MustCompile("table[width=\"884\"]")
-	cascadiaStrongA = cascadia.MustCompile("strong, a")
-	cascadiaWidth850 = cascadia.MustCompile("td[width=\"850\"]")
-	cascadiaCrazy = cascadia.MustCompile("body > table > tbody > tr:nth-child(2) > td:nth-child(3) > table > tbody > tr")
-	cascadiaAStrongSpan = cascadia.MustCompile("a, strong, span")
-	cascadiaColSpan3 = cascadia.MustCompile("td[colspan=\"3\"]")
 )
 
 type IssueParser interface {
@@ -128,8 +120,9 @@ type CbParser struct {
 
 // Parses a character's page and returns the corresponding struct.
 func (p *CbParser) Character(body io.Reader) (*CharacterPage, error) {
-	utf8Body := cbDecoder.Reader(body)
-	doc, err := goquery.NewDocumentFromReader(utf8Body)
+	// CBDB uses Windows 1252 encoding for their pages. Need to decode it all to UTF8!
+	// Create new decoder every time to make this method concurrent safe.
+	doc, err := goquery.NewDocumentFromReader(charmap.ISO8859_1.NewDecoder().Reader(body))
 	if err != nil {
 		return nil, ErrParse
 	}
@@ -157,7 +150,7 @@ func (p *CbParser) Character(body io.Reader) (*CharacterPage, error) {
 	otherIdentities := make([]CharacterLink, 0)
 	otherIdentitiesSection := false
 	issueAppearancesSection := false
-	doc.FindMatcher(cascadiaWidth884).FindMatcher(cascadiaStrongA).Each(func(i int, s *goquery.Selection) {
+	doc.FindMatcher(cascadia.MustCompile("table[width=\"884\"]")).FindMatcher(cascadia.MustCompile("strong, a")).Each(func(i int, s *goquery.Selection) {
 		text := s.Text()
 		if strings.Contains(text, "Other Identities:") {
 			otherIdentitiesSection = true
@@ -193,8 +186,7 @@ func (p *CbParser) BaseUrl() string {
 
 // Parses the links to character profiles and their names from the search page.
 func (p *CbParser) CharacterSearch(body io.Reader) (*CharacterSearchResult, error) {
-	utf8Body := cbDecoder.Reader(body)
-	doc, err := goquery.NewDocumentFromReader(utf8Body)
+	doc, err := goquery.NewDocumentFromReader(charmap.ISO8859_1.NewDecoder().Reader(body))
 	if err != nil {
 		return nil, ErrParse
 	}
@@ -204,7 +196,7 @@ func (p *CbParser) CharacterSearch(body io.Reader) (*CharacterSearchResult, erro
 	characterSearchResult := new(CharacterSearchResult)
 	characterLinks := make([]CharacterLink, 0)
 
-	doc.FindMatcher(cascadiaWidth850).Find("a").Each(func(i int, s *goquery.Selection) {
+	doc.FindMatcher(cascadia.MustCompile("td[width=\"850\"]")).Find("a").Each(func(i int, s *goquery.Selection) {
 		hrefValue, exists := s.Attr("href")
 		if exists && strings.HasPrefix(hrefValue, "character.php") {
 			characterLink := CharacterLink{Name: strings.TrimSpace(s.Text()), Url: fmt.Sprintf("%s/%s", p.BaseUrl(), hrefValue)}
@@ -217,8 +209,7 @@ func (p *CbParser) CharacterSearch(body io.Reader) (*CharacterSearchResult, erro
 
 // Parses an issue page and returns the corresponding struct.
 func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
-	utf8Body := cbDecoder.Reader(body)
-	doc, err := goquery.NewDocumentFromReader(utf8Body)
+	doc, err := goquery.NewDocumentFromReader(charmap.ISO8859_1.NewDecoder().Reader(body))
 	if err != nil {
 		return nil, ErrParse
 	}
@@ -227,7 +218,7 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 	}
 	issue := new(Issue)
 
-	doc.FindMatcher(cascadiaCrazy).FindMatcher(cascadiaAStrongSpan).Each(func(i int, s *goquery.Selection) {
+	doc.FindMatcher(cascadia.MustCompile("body > table > tbody > tr:nth-child(2) > td:nth-child(3) > table > tbody > tr")).FindMatcher(cascadia.MustCompile("a, strong, span")).Each(func(i int, s *goquery.Selection) {
 		hrefValue, ex := s.Attr("href")
 		if issue.Vendor == "" && ex && strings.HasPrefix(hrefValue, "publisher.php"){
 			issue.Vendor = strings.TrimSpace(s.Text())
@@ -319,7 +310,7 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 	})
 
 	foundFormat := false
-	doc.FindMatcher(cascadiaWidth850).FindMatcher(cascadiaColSpan3).Each(func(i int, s *goquery.Selection) {
+	doc.FindMatcher(cascadia.MustCompile("td[width=\"850\"]")).FindMatcher(cascadia.MustCompile("td[colspan=\"3\"]")).Each(func(i int, s *goquery.Selection) {
 		trimmedText := strings.TrimSpace(s.Text())
 		formatIndex := strings.Index(trimmedText, "Format:")
 		semiColonIndex := strings.LastIndex(trimmedText, ";")
@@ -357,8 +348,7 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 }
 
 func (p *CbParser) IssueLinks(body io.Reader) ([]string, error) {
-	utf8Body := cbDecoder.Reader(body)
-	doc, err := goquery.NewDocumentFromReader(utf8Body)
+	doc, err := goquery.NewDocumentFromReader(charmap.ISO8859_1.NewDecoder().Reader(body))
 	if err != nil {
 		return nil, ErrParse
 	}

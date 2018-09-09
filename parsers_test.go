@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
+	"sync"
+	"fmt"
 )
 
 func TestCbParser_parse(t *testing.T) {
@@ -347,4 +349,26 @@ func TestCbParser_Issue_Annual(t *testing.T) {
 	assert.True(t, issue.IsIssue)
 	assert.Equal(t, Standard, issue.Format)
 	assert.Equal(t, "Annual '96", issue.Number)
+}
+
+
+func TestConcurrent(t *testing.T) {
+	var wg sync.WaitGroup
+	//parser := CbParser{}
+	parser := CbParser{}
+	wg.Add(100)
+	for i := 0; i < 100; i++ {
+		go func(wg *sync.WaitGroup, i int) {
+			fmt.Println(i)
+			defer wg.Done()
+			file, err := os.Open("./testdata/cb_issue_annual.html")
+			defer file.Close()
+			issue, err := parser.Issue(file)
+			assert.Nil(t, err)
+			fmt.Println(issue.Id)
+
+		}(&wg, i)
+	}
+	wg.Wait()
+	// done
 }
