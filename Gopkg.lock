@@ -20,6 +20,12 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  revision = "c34cdb4725f4c3844d095133c6e40e448b86589b"
+  version = "v1.1.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -35,6 +41,7 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = [
+    "context",
     "html",
     "html/atom"
   ]
@@ -57,6 +64,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "848b9129046ac18f562157f0ae882b0715e53e92303491143cff89418aa59304"
+  inputs-digest = "672750911526fa3c139d594e6eaaa3e17ca638332540696df76a8a175ed0884b"
   solver-name = "gps-cdcl"
   solver-version = 1
