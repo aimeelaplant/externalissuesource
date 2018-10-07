@@ -145,6 +145,21 @@ func (p *CbParser) Character(body io.Reader) (*CharacterPage, error) {
 	}
 	characterPage.Title = titleText
 
+	// get the other name
+	doc.FindMatcher(cascadia.MustCompile("table[width=\"884\"]")).Each(func(i int, selection *goquery.Selection) {
+		selectionText := selection.Text()
+		if idx := strings.Index(selectionText, "Real Name: "); idx == -1 {
+			return
+		}
+		for _, s := range strings.SplitAfter(selectionText, "\n") {
+			if idx2 := strings.Index(s, "Real Name: "); idx2 != -1 && s != "Real Name: " && len(s) > idx2+11{
+				// Get the real name
+				characterPage.OtherName = strings.TrimSpace(s[idx2+11:])
+				break
+			}
+		}
+	})
+
 	// Get the issue links
 	issueLinks := make([]string, 0)
 	otherIdentities := make([]CharacterLink, 0)

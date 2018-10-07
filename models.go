@@ -58,6 +58,7 @@ type CharacterPage struct {
 	Publisher       string          // The name of the publisher.
 	Title           string          // The title of the page
 	Name            string          // The name of the character
+	OtherName       string			// The other name of the character.
 	IssueLinks      []string        // Links to a character's issues.
 	OtherIdentities []CharacterLink // Links to other identities for the character.
 }

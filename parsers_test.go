@@ -22,6 +22,7 @@ func TestCbParser_parse(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 	assert.Len(t, character.IssueLinks, 10)
+	assert.Equal(t, "Jean Grey", character.OtherName)
 }
 
 func TestCbParser_Issue_TheEnd(t *testing.T) {
@@ -34,7 +35,6 @@ func TestCbParser_Issue_TheEnd(t *testing.T) {
 	issue, err := parser.Issue(file)
 	assert.Nil(t, err)
 	assert.Equal(t, "1", issue.Number)
-	assert.True(t, issue.IsIssue)
 	assert.Equal(t, "26025", issue.Id)
 	assert.Equal(t, "3152", issue.SeriesId)
 	assert.Equal(t, "X-Men: The End: Book 1: Dreamers & Demons (2004)", issue.Series)
@@ -71,7 +71,6 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	parser := CbParser{}
 	issue, err := parser.Issue(file)
 	assert.False(t, issue.IsVariant)
-	assert.True(t, issue.IsIssue)
 	assert.Equal(t, 2007, int(issue.PublicationDate.Year()))
 	assert.Equal(t, 10, int(issue.PublicationDate.Month()))
 	assert.Equal(t, 2007, int(issue.OnSaleDate.Year()))
@@ -90,7 +89,6 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	assert.Empty(t, issue2.Number)
 	assert.Equal(t, 2014, issue2.PublicationDate.Year())
 	assert.False(t, issue2.IsVariant)
-	assert.False(t, issue2.IsIssue)
 	assert.Equal(t, TPB, issue2.Format)
 
 	file3, err3 := os.Open("./testdata/cb_issue_nn.html")
@@ -100,7 +98,6 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	assert.Nil(t, err4)
 	assert.Equal(t, "X-Men: Empire's End (1997)", issue3.Series)
 	assert.Equal(t, "", issue3.Number)
-	assert.False(t, issue3.IsIssue)
 	assert.Equal(t, 1998, issue3.PublicationDate.Year())
 	assert.Equal(t, time.September, issue3.PublicationDate.Month())
 	assert.Equal(t, 1998, issue3.OnSaleDate.Year())
@@ -114,7 +111,6 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	assert.Nil(t, err4)
 	assert.Equal(t, "X-Men Forever (2009)", issue4.Series)
 	assert.Equal(t, "", issue4.Number)
-	assert.False(t, issue4.IsIssue)
 	assert.Equal(t, 2009, issue4.PublicationDate.Year())
 	assert.Equal(t, time.April, issue4.PublicationDate.Month())
 	assert.Equal(t, 2009, issue4.OnSaleDate.Year())
@@ -161,6 +157,7 @@ func TestCbParser_Character(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 	assert.Equal(t, "Emmaline Frost", i.Name)
+	assert.Equal(t, "", i.OtherName)
 }
 
 func TestCbParser_Issue_Mid_Date(t *testing.T) {
@@ -208,7 +205,6 @@ func TestCbParser_Issue_Foreign(t *testing.T) {
 	issue, err := parser.Issue(file)
 	assert.Nil(t, err)
 	assert.Equal(t, "6", issue.Number)
-	assert.True(t, issue.IsIssue)
 	assert.Equal(t, "352823", issue.Id)
 	assert.Equal(t, "50014", issue.SeriesId)
 	assert.Equal(t, "Action Comics (2001)", issue.Series)
@@ -251,7 +247,6 @@ func TestCbParser_Issue_Year_Only(t *testing.T) {
 	assert.Equal(t, 2014, issue.PublicationDate.Year())
 	assert.Equal(t, time.January, issue.PublicationDate.Month())
 	assert.Equal(t, time.January, issue.OnSaleDate.Month())
-	assert.False(t, issue.IsIssue)
 	assert.Equal(t, OGN, issue.Format)
 }
 
@@ -294,7 +289,6 @@ func TestCbParser_Issue_Hc(t *testing.T) {
 	parser := CbParser{}
 	issue, err := parser.Issue(file)
 	assert.Nil(t, err)
-	assert.False(t, issue.IsIssue)
 	assert.Equal(t, HC, issue.Format)
 }
 
@@ -308,6 +302,7 @@ func TestCbParser_Character_Link_In_Bio(t *testing.T) {
 	c, err := parser.Character(file)
 	assert.Nil(t, err)
 	assert.Len(t, c.IssueLinks, 168)
+	assert.Equal(t, "Jean Karen Grant Grey", c.OtherName)
 }
 
 func TestCbParser_CharacterSearch(t *testing.T) {
@@ -332,7 +327,6 @@ func TestCbParser_Issue_No_Edit(t *testing.T) {
 	issue, err := parser.Issue(file)
 	assert.Nil(t, err)
 	assert.Equal(t, "39067", issue.Id)
-	assert.True(t, issue.IsIssue)
 	assert.Equal(t, Standard, issue.Format)
 }
 
@@ -346,7 +340,6 @@ func TestCbParser_Issue_Annual(t *testing.T) {
 	issue, err := parser.Issue(file)
 	assert.Nil(t, err)
 	assert.Equal(t, "28458", issue.Id)
-	assert.True(t, issue.IsIssue)
 	assert.Equal(t, Standard, issue.Format)
 	assert.Equal(t, "Annual '96", issue.Number)
 }
