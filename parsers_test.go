@@ -71,6 +71,7 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	parser := CbParser{}
 	issue, err := parser.Issue(file)
 	assert.False(t, issue.IsVariant)
+	assert.False(t, issue.IsReprint)
 	assert.Equal(t, 2007, int(issue.PublicationDate.Year()))
 	assert.Equal(t, 10, int(issue.PublicationDate.Month()))
 	assert.Equal(t, 2007, int(issue.OnSaleDate.Year()))
@@ -89,6 +90,7 @@ func TestCbParser_parseIssuePages(t *testing.T) {
 	assert.Empty(t, issue2.Number)
 	assert.Equal(t, 2014, issue2.PublicationDate.Year())
 	assert.False(t, issue2.IsVariant)
+	assert.False(t, issue2.IsReprint)
 	assert.Equal(t, TPB, issue2.Format)
 
 	file3, err3 := os.Open("./testdata/cb_issue_nn.html")
@@ -364,4 +366,28 @@ func TestConcurrent(t *testing.T) {
 	}
 	wg.Wait()
 	// done
+}
+
+func TestCbParser_Issue_Reprint(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_reprint.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.True(t, issue.IsReprint)
+}
+
+func TestCbParser_Issue_No_Reprint(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_no_reprint.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.False(t, issue.IsReprint)
 }

@@ -322,6 +322,9 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 				}
 			}
 		}
+		if issue.IsReprint == false && strings.Contains(strings.ToLower(s.Text()), "this is a version of the following issue") {
+			issue.IsReprint = true
+		}
 	})
 
 	foundFormat := false

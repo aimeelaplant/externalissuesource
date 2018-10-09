@@ -51,6 +51,7 @@ type Issue struct {
 	OnSaleDate      time.Time // The release date or on sale date that the issue was published.
 	SeriesId        string    // unique identifier for the series/title of the issue.
 	MonthUncertain  bool 	  // Sometimes an external source has the date of "annual", so in this case the month is uncertain.
+	IsReprint       bool     // The issue is a full reprint with no original story.
 }
 
 // Represents a character's detailed paged.
