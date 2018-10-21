@@ -391,3 +391,38 @@ func TestCbParser_Issue_No_Reprint(t *testing.T) {
 	assert.Nil(t, err)
 	assert.False(t, issue.IsReprint)
 }
+
+func TestCbParser_Issue_HasAReprint(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_has_a_reprint.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.False(t, issue.IsReprint)
+}
+
+func TestCbParser_Issue_PrestigeAnnual(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_prestige_annual.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	issue, err := parser.Issue(file)
+	assert.Nil(t, err)
+	assert.False(t, issue.IsReprint)
+}
+
+func TestCbParser_Issue_TimeExtraText(t *testing.T) {
+	file, err := os.Open("./testdata/cb_issue_parse_time_extra_text.html")
+	defer file.Close()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	parser := CbParser{}
+	_, err = parser.Issue(file)
+	assert.Nil(t, err)
+}

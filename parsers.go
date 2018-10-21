@@ -255,6 +255,7 @@ func (p *CbParser) Issue(body io.Reader) (*Issue, error) {
 				trimmedDateText = dateText
 			}
 			format := ""
+			trimmedDateText = strings.TrimSpace(trimmedDateText)
 			if regMY.MatchString(trimmedDateText) {
 				format = "January 2006"
 			} else if regMDY.MatchString(trimmedDateText) {
